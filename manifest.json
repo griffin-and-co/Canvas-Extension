@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "UVA Canvas Reskin MVP",
   "version": "0.1.0",
-  "description": "Reskins key Canvas pages (dashboard, calendar, inbox, groups, and course pages) on UVA Canvas.",
+  "description": "Reskins key Canvas pages (such as the dashboard, calendar, inbox, groups, and course pages) on UVA Canvas.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
