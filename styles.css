@@ -9,7 +9,9 @@
 }
 
 /* --- 2. OVERLAY SETUP --- */
-body { overflow: hidden !important; }
+body.extension-overlay-active { 
+    overflow: hidden !important; 
+}
 
 #my-extension-root {
     position: fixed;
@@ -247,4 +249,56 @@ body { overflow: hidden !important; }
 .btn-connect {
     background: var(--uva-navy); color: white; padding: 10px 20px;
     border-radius: 8px; text-decoration: none; font-weight: bold;
+}
+
+/* --- 10. TODO PAGE --- */
+.todo-input-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.todo-input {
+    flex: 1;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    font-size: 14px;
+}
+
+.todo-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.todo-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.todo-text {
+    font-size: 15px;
+}
+
+.todo-done {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.todo-delete {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 4px 8px;
+}
+
+.todo-empty {
+    padding: 10px 0;
+    color: #777;
+    font-size: 14px;
 }

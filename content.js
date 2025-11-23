@@ -110,6 +110,28 @@ let currentView = "home"; // 'home', 'connect', 'calendar', 'todo', 'profile', '
 let upcomingView = 'list'; // 'list' or 'calendar'
 let dataLoaded = false;
 
+let todos = loadTodos();
+
+function loadTodos() {
+    try {
+        const raw = localStorage.getItem("canvasPlus_todos");
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        console.warn("Failed to load todos", e);
+        return [];
+    }
+}
+
+function saveTodos() {
+    try {
+        localStorage.setItem("canvasPlus_todos", JSON.stringify(todos));
+    } catch (e) {
+        console.warn("Failed to save todos", e);
+    }
+}
+
 // --- 3. CANVAS DATA LOADERS ---
 
 async function fetchCourseGrades(courseId) {
@@ -291,10 +313,10 @@ function getHomeContent() {
         <!-- LEFT: Courses -->
         <div class="left-column">
             <div class="icon-row">
-                <div class="icon-card">💬</div>
-                <div class="icon-card">📄</div>
-                <div class="icon-card">👥</div>
-                <div class="icon-card">☰</div>
+                <div class="icon-card" data-icon="inbox">💬</div>
+                <div class="icon-card" data-icon="files">📄</div>
+                <div class="icon-card" data-icon="groups">👥</div>
+                <div class="icon-card" data-icon="menu">☰</div>
             </div>
             <div class="course-list">
                 ${courseHTML}
@@ -455,6 +477,39 @@ function getUpcomingCalendarHTML() {
     `;
 }
 
+function getTodoContent() {
+    const itemsHtml = todos.map((t, idx) => `
+        <li class="todo-item" data-idx="${idx}">
+            <label style="display:flex; align-items:center; gap:8px;">
+                <input type="checkbox" class="todo-toggle" ${t.done ? "checked" : ""} />
+                <span class="todo-text ${t.done ? "todo-done" : ""}">
+                    ${t.text}
+                </span>
+            </label>
+            <button class="todo-delete" aria-label="Delete task">✕</button>
+        </li>
+    `).join("");
+
+    return `
+        <div class="dashboard-container">
+            <div class="full-width-column">
+                <h2 class="upcoming-title" style="margin-bottom:20px;">Todo</h2>
+                <div class="todo-input-row">
+                    <input
+                        id="todoInput"
+                        class="todo-input"
+                        type="text"
+                        placeholder="Add a task..."
+                    />
+                    <button id="todoAddBtn" class="btn-connect">Add</button>
+                </div>
+                <ul class="todo-list">
+                    ${itemsHtml || '<li class="todo-empty">No tasks yet.</li>'}
+                </ul>
+            </div>
+        </div>
+    `;
+}
 
 
 // -- CONNECT VIEW GENERATOR --
@@ -500,6 +555,8 @@ function render() {
     if (currentView === "home") contentHTML = getHomeContent();
     else if (currentView === "calendar") contentHTML = getCalendarContent();
     else if (currentView === "connect") contentHTML = getConnectContent();
+    else if (currentView === "todo") contentHTML = getTodoContent();
+
     else
         contentHTML = `
         <div class="dashboard-container">
@@ -520,6 +577,23 @@ function attachListeners() {
             render();
         });
     });
+
+        // Icon shortcuts: inbox, files, groups
+    document.querySelectorAll(".icon-card[data-icon]").forEach((card) => {
+        card.addEventListener("click", () => {
+            const type = card.dataset.icon;
+            if (type === "inbox") {
+                window.location.href = "https://canvas.its.virginia.edu/conversations";
+            } else if (type === "files") {
+                window.location.href = "https://canvas.its.virginia.edu/files";
+            } else if (type === "groups") {
+                window.location.href = "https://canvas.its.virginia.edu/groups";
+            } else if (type === "menu") {
+                // placeholder for future menu behavior
+            }
+        });
+    });
+
         // Upcoming view toggle
     const upcomingToggle = document.getElementById('upcomingToggle');
     if (upcomingToggle) {
@@ -539,6 +613,50 @@ function attachListeners() {
         });
     });
 
+        // --- TODO VIEW BEHAVIOR ---
+
+    const todoInput = document.getElementById("todoInput");
+    const todoAddBtn = document.getElementById("todoAddBtn");
+
+    if (todoInput && todoAddBtn) {
+        const addTodo = () => {
+            const text = todoInput.value.trim();
+            if (!text) return;
+            todos.push({ text, done: false });
+            saveTodos();
+            render();
+        };
+
+        todoAddBtn.addEventListener("click", addTodo);
+        todoInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") addTodo();
+        });
+    }
+
+    document.querySelectorAll(".todo-item").forEach((li) => {
+        const idx = Number(li.dataset.idx);
+        const toggle = li.querySelector(".todo-toggle");
+        const del = li.querySelector(".todo-delete");
+
+        if (toggle) {
+            toggle.addEventListener("change", () => {
+                if (!Number.isInteger(idx) || idx < 0 || idx >= todos.length) return;
+                todos[idx].done = !todos[idx].done;
+                saveTodos();
+                render();
+            });
+        }
+
+        if (del) {
+            del.addEventListener("click", () => {
+                if (!Number.isInteger(idx) || idx < 0 || idx >= todos.length) return;
+                todos.splice(idx, 1);
+                saveTodos();
+                render();
+            });
+        }
+    });
+
 
 }
 
@@ -547,6 +665,9 @@ function attachListeners() {
 function init() {
     if (location.href !== "https://canvas.its.virginia.edu/") return;
     if (document.getElementById("my-extension-root")) return;
+
+    document.body.classList.add("extension-overlay-active");  // <-- add this
+
     const root = document.createElement("div");
     root.id = "my-extension-root";
     document.body.appendChild(root);
@@ -557,6 +678,7 @@ function init() {
     // async load real Canvas data and re-render when ready
     loadCanvasData();
 }
+
 
 // Run
 init();
