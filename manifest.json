@@ -1,24 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "UVA Canvas Reskin MVP",
-  "version": "0.1.0",
-  "description": "Reskins key Canvas pages (such as the dashboard, calendar, inbox, groups, and course pages) on UVA Canvas.",
+  "name": "UVA Canvas Dashboard Reskin",
+  "description": "Reskins the Canvas dashboard at canvas.its.virginia.edu to match a custom UVA-style layout.",
+  "version": "1.0.0",
   "icons": {
-    "16": "icons/icon16.png",
-    "48": "icons/icon48.png",
-    "128": "icons/icon128.png"
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
   },
   "content_scripts": [
     {
-      "matches": [
-        "https://canvas.its.virginia.edu/*"
-      ],
+      "matches": ["https://canvas.its.virginia.edu/*"],
       "js": ["content.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"
     }
-  ],
-  "host_permissions": [
-    "https://canvas.its.virginia.edu/*"
   ]
 }
