@@ -436,6 +436,7 @@ function attachListeners() {
 // --- 6. INIT ---
 
 function init() {
+    if (location.href !== "https://canvas.its.virginia.edu/") return;
     if (document.getElementById("my-extension-root")) return;
     const root = document.createElement("div");
     root.id = "my-extension-root";
