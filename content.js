@@ -27,7 +27,7 @@
   function initReskin() {
     // Only act on the main Canvas dashboard
     const url = window.location.href;
-    if (!url.includes("/dashboard")) return;
+    //if (!url.includes("/dashboard")) return;
 
     // Best effort: hide the stock dashboard cards so our reskin dominates
     hideNativeDashboard();
