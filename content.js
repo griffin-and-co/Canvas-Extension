@@ -196,7 +196,7 @@
       23: [{ label: "Quiz", color: "uva-cal-pill-peach" }],
       26: [{ label: "Final Paper Due", color: "uva-cal-pill-red" }],
       30: [{ label: "Study Group", color: "uva-cal-pill-peach" }],
-      2 + 31: [{ label: "Office Hours", color: "uva-cal-pill-blue" }] // maps to "day index 33" used below
+      31: [{ label: "Office Hours", color: "uva-cal-pill-blue" }] // maps to "day index 33" used below
     };
 
     // Figma month layout starts on Monday with 1st in first row, second column
