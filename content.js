@@ -481,20 +481,24 @@ function getConnectContent() {
 // --- 5. RENDER LOGIC ---
 
 function render() {
-    const root = document.getElementById('my-extension-root');
+    const root = document.getElementById("my-extension-root");
     if (!root) return;
 
-    let contentHTML = '';
-    if (currentView === 'home') contentHTML = getHomeContent();
-    else if (currentView === 'calendar') contentHTML = getCalendarContent();
-    else if (currentView === 'connect') contentHTML = getConnectContent();
-    else contentHTML = `<div class="dashboard-container"><div class="full-width-column"><h1>${currentView.toUpperCase()} View Coming Soon</h1></div></div>`;
+    let contentHTML = "";
+    if (currentView === "home") contentHTML = getHomeContent();
+    else if (currentView === "calendar") contentHTML = getCalendarContent();
+    else if (currentView === "connect") contentHTML = getConnectContent();
+    else
+        contentHTML = `
+        <div class="dashboard-container">
+            <div class="full-width-column">
+                <h1>${currentView.toUpperCase()} View Coming Soon</h1>
+            </div>
+        </div>`;
 
     root.innerHTML = getNavHTML() + contentHTML;
-
     attachListeners();
 }
-
 
 function attachListeners() {
     // Top nav
