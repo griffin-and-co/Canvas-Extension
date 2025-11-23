@@ -65,7 +65,7 @@ body { overflow: hidden !important; }
 
 /* LEFT COLUMN (Sidebar info) */
 .left-column {
-    flex: 1; 
+    flex: 0.8; 
     display: flex;
     flex-direction: column;
     gap: 35px;
@@ -73,13 +73,17 @@ body { overflow: hidden !important; }
 
 /* RIGHT COLUMN (Main Content Area) */
 .right-column {
-    width: 500px; /* Default for Home View */
+    flex: 1.2;
+    max-width: 900px;
     background: white;
     padding: 40px;
     border-radius: 30px;
     min-height: 700px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column;
 }
+
 
 /* FULL WIDTH MODE (For Calendar/Connect pages) */
 .full-width-column {
@@ -167,4 +171,35 @@ body { overflow: hidden !important; }
 .btn-connect {
     background: var(--uva-navy); color: white; padding: 10px 20px;
     border-radius: 8px; text-decoration: none; font-weight: bold;
+}
+
+/* Upcoming panel internal scroll */
+.upcoming-body {
+    flex: 1;
+    max-height: 650px;          /* limit vertical size */
+    overflow-y: auto;           /* scroll inside the frame */
+    padding-right: 8px;         /* small gutter for scrollbar */
+}
+
+/* Toggle buttons */
+.view-toggle {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.view-toggle-btn {
+    border: 1px solid var(--border-color);
+    background: #f3f4f6;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.view-toggle-btn.active {
+    background: var(--uva-navy);
+    color: #fff;
+    border-color: var(--uva-navy);
 }

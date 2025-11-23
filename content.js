@@ -107,6 +107,7 @@ const fallbackAssignments = [
 let courses = [...fallbackCourses];
 let assignments = [...fallbackAssignments];
 let currentView = "home"; // 'home', 'connect', 'calendar', 'todo', 'profile', 'settings'
+let homeUpcomingMode = 'list'; // 'list' or 'calendar'
 let dataLoaded = false;
 
 // --- 3. CANVAS DATA LOADERS ---
@@ -285,6 +286,10 @@ function getHomeContent() {
         )
         .join("");
 
+    const upcomingBodyHTML = homeUpcomingMode === 'list'
+        ? `<div class="assignments-list">${assignmentHTML}</div>`
+        : getCalendarGridHTML();
+
     return `
     <div class="dashboard-container">
         <!-- LEFT: Courses -->
@@ -303,12 +308,67 @@ function getHomeContent() {
         <div class="right-column">
             <div class="upcoming-header">
                 <div class="upcoming-title">Upcoming</div>
+                <div class="view-toggle">
+                    <button
+                        class="view-toggle-btn ${homeUpcomingMode === 'list' ? 'active' : ''}"
+                        data-mode="list"
+                    >
+                        List view
+                    </button>
+                    <button
+                        class="view-toggle-btn ${homeUpcomingMode === 'calendar' ? 'active' : ''}"
+                        data-mode="calendar"
+                    >
+                        Calendar view
+                    </button>
+                </div>
             </div>
-            <div class="assignments-list">
-                ${assignmentHTML}
+            <div class="upcoming-body">
+                ${upcomingBodyHTML}
             </div>
         </div>
+
     </div>`;
+}
+
+function getCalendarGridHTML() {
+    // TODO: replace "May 2026" logic later with real dates if you want
+    let daysHTML = '';
+    for (let i = 1; i <= 31; i++) {
+        const events = assignments.filter(a => a.date.includes(`May ${i},`));
+
+        const eventHTML = events.map(e => `
+            <a
+                href="${e.url || '#'}"
+                class="cal-event"
+                style="background:${e.bg}"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                ${e.title}
+            </a>
+        `).join('');
+
+        daysHTML += `
+            <div class="cal-cell">
+                <strong>${i}</strong>
+                ${eventHTML}
+            </div>
+        `;
+    }
+
+    return `
+        <div class="calendar-grid">
+            <div class="cal-day-header">Mon</div>
+            <div class="cal-day-header">Tue</div>
+            <div class="cal-day-header">Wed</div>
+            <div class="cal-day-header">Thu</div>
+            <div class="cal-day-header">Fri</div>
+            <div class="cal-day-header">Sat</div>
+            <div class="cal-day-header">Sun</div>
+            ${daysHTML}
+        </div>
+    `;
 }
 
 // -- CALENDAR VIEW GENERATOR --
@@ -351,19 +411,10 @@ function getCalendarContent() {
     <div class="dashboard-container">
         <div class="full-width-column">
             <div class="calendar-header">
-                <h2 class="upcoming-title">${monthName} ${year}</h2>
+                <h2 class="upcoming-title">May 2026</h2>
                 <div style="font-size: 20px;">Reference Mode</div>
             </div>
-            <div class="calendar-grid">
-                <div class="cal-day-header">Mon</div>
-                <div class="cal-day-header">Tue</div>
-                <div class="cal-day-header">Wed</div>
-                <div class="cal-day-header">Thu</div>
-                <div class="cal-day-header">Fri</div>
-                <div class="cal-day-header">Sat</div>
-                <div class="cal-day-header">Sun</div>
-                ${daysHTML}
-            </div>
+            ${getCalendarGridHTML()}
         </div>
     </div>`;
 }
@@ -429,6 +480,16 @@ function attachListeners() {
         item.addEventListener("click", () => {
             currentView = item.dataset.view;
             render();
+        });
+    });
+    const viewToggleButtons = document.querySelectorAll('.view-toggle-btn');
+    viewToggleButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const mode = btn.dataset.mode;
+            if (mode && mode !== homeUpcomingMode) {
+                homeUpcomingMode = mode;
+                render();
+            }
         });
     });
 }
