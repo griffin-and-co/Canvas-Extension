@@ -1,14 +1,26 @@
 {
   "manifest_version": 3,
-  "name": "UVA Canvas Dashboard Reskin",
-  "description": "Reskins the Canvas dashboard at canvas.its.virginia.edu to match a custom UVA-style layout.",
-  "version": "1.0.0",
+  "name": "Canvas Dashboard MVP",
+  "version": "1.0",
+  "description": "A student-focused redesign of the Canvas Dashboard.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage" 
+  ],
+  "host_permissions": [
+    "*://*.instructure.com/*",
+    "*://canvas.its.virginia.edu/*"
+  ],
   "content_scripts": [
     {
-      "matches": ["https://canvas.its.virginia.edu/*"],
-      "js": ["content.js"],
+      "matches": [
+        "*://*.instructure.com/*", 
+        "*://canvas.its.virginia.edu/*"
+      ],
       "css": ["styles.css"],
-      "run_at": "document_idle"
+      "js": ["content.js"],
+      "run_at": "document_end"
     }
   ]
 }

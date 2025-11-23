@@ -1,265 +1,199 @@
-// content.js
+// --- 1. DATA: COURSES ---
+const courses = [
+    { name: "Introduction to Computer Science", time: "M/W/F 9:30-10:45", grade: "91%", bg: "#B1C5FF" },
+    { name: "New Product Development", time: "Th 3:30-6:00", grade: "88%", bg: "#B1FFB5" },
+    { name: "Materials Science", time: "M/W/F 12:30-1:45", grade: "75%", bg: "#FFB1B2" },
+    { name: "Fundamentals of Real Estate Analysis", time: "T/Th 9:30-10:45", grade: "94%", bg: "#FFD7B1" },
+    { name: "Introduction to Macroeconomics", time: "M/W/F 11:00-11:50", grade: "92%", bg: "#D2B1FF" }
+];
 
-// Immediately-invoked function to avoid leaking variables
-(function () {
-  /**
-   * Entry point. Only runs on the main Canvas dashboard.
-   * Guards prevent this from touching course pages, etc. for now.
-   */
-  function init() {
-    // Heuristic: dashboard has these containers
-    const isDashboard =
-      document.getElementById("dashboard-planner") ||
-      document.getElementById("DashboardCard_Container") ||
-      document.getElementById("dashboard-activity");
+// --- 2. DATA: ASSIGNMENTS ---
+const assignments = [
+    { title: "Midterm Exam", date: "Tue, May 9, 2026", course: "Real Estate Analysis", bg: "#FFD7B1" },
+    { title: "Project Presentation", date: "Fri, May 12, 2026", course: "Computer Science", bg: "#B1C5FF" },
+    { title: "Lab Report Due", date: "Tue, May 16, 2026", course: "Real Estate Analysis", bg: "#FFD7B1" },
+    { title: "Group Discussion", date: "Fri, May 19, 2026", course: "Macroeconomics", bg: "#D2B1FF" },
+    { title: "Final Paper Due", date: "Fri, May 26, 2026", course: "Materials Science", bg: "#FFB1B2" }
+];
 
-    if (!isDashboard) return;
+// --- 3. STATE MANAGEMENT ---
+let currentView = 'home'; // Options: 'home', 'connect', 'calendar', 'todo', 'profile', 'settings'
 
-    // Wait a bit for Canvas to finish its own DOM work, then reskin.
-    // This keeps us from fighting their JS.
-    setTimeout(applyReskin, 1000);
-  }
+// --- 4. HTML GENERATORS ---
 
-  /**
-   * Hides the default dashboard blocks and injects our custom layout.
-   */
-  function applyReskin() {
-    // Do not inject twice
-    if (document.getElementById("uva-dashboard-reskin-root")) return;
+function getNavHTML() {
+    // We add onclick handlers via class targeting later, so we use data-attributes here
+    const getActive = (view) => currentView === view ? 'active' : '';
+    
+    return `
+    <nav class="custom-nav">
+        <div class="nav-group">
+            <div class="nav-item ${getActive('home')}" data-view="home"><span>🏠</span> Home</div>
+            <div class="nav-item ${getActive('connect')}" data-view="connect"><span>👥</span> Connect Your Classes</div>
+            <div class="nav-item ${getActive('calendar')}" data-view="calendar"><span>📅</span> Calendar</div>
+            <div class="nav-item ${getActive('todo')}" data-view="todo"><span>✅</span> Todo</div>
+        </div>
+        <div class="nav-group">
+            <div class="nav-item ${getActive('profile')}" data-view="profile"><span>👤</span> Profile</div>
+            <div class="nav-item ${getActive('settings')}" data-view="settings"><span>⚙️</span> Settings</div>
+        </div>
+    </nav>
+    `;
+}
 
-    // Add flag to body so styles can scope off it if needed
-    document.body.classList.add("uva-dashboard-reskinned");
+// -- HOME VIEW GENERATORS --
+function getHomeContent() {
+    const courseHTML = courses.map(c => `
+        <div class="course-pill" style="background-color: ${c.bg};">
+            <div>
+                <h3 class="course-title">${c.name}</h3>
+                <p class="course-time">${c.time}</p>
+            </div>
+            <div class="course-grade">${c.grade}</div>
+        </div>
+    `).join('');
 
-    // Hide core dashboard containers (planner stream, cards, activity)
-    [
-      "dashboard_header_container",
-      "dashboard-planner",
-      "dashboard-activity",
-      "DashboardCard_Container"
-    ].forEach(function (id) {
-      const el = document.getElementById(id);
-      if (el) {
-        el.style.display = "none";
-      }
+    const assignmentHTML = assignments.map(a => `
+        <div class="assignment-item">
+            <div class="assignment-top-row">
+                <span>${a.title}</span>
+                <span class="assignment-date">${a.date}</span>
+            </div>
+            <div class="assignment-course">${a.course}</div>
+        </div>
+    `).join('');
+
+    return `
+    <div class="dashboard-container">
+        <!-- LEFT: Courses -->
+        <div class="left-column">
+            <div class="icon-row">
+                <div class="icon-card">💬</div>
+                <div class="icon-card">📄</div>
+                <div class="icon-card">👥</div>
+                <div class="icon-card">☰</div>
+            </div>
+            <div class="course-list">
+                ${courseHTML}
+            </div>
+        </div>
+        <!-- RIGHT: Upcoming -->
+        <div class="right-column">
+            <div class="upcoming-header">
+                <div class="upcoming-title">Upcoming</div>
+            </div>
+            <div class="assignments-list">
+                ${assignmentHTML}
+            </div>
+        </div>
+    </div>`;
+}
+
+// -- CALENDAR VIEW GENERATOR --
+function getCalendarContent() {
+    // Fake calendar grid generation for May 2026
+    let daysHTML = '';
+    for(let i=1; i<=31; i++) {
+        // Find events for this "fake" date day
+        // This is a simple matcher for MVP visuals
+        const events = assignments.filter(a => a.date.includes(`May ${i},`));
+        const eventHTML = events.map(e => `<div class="cal-event" style="background:${e.bg}">${e.title}</div>`).join('');
+        
+        daysHTML += `
+            <div class="cal-cell">
+                <strong>${i}</strong>
+                ${eventHTML}
+            </div>
+        `;
+    }
+
+    return `
+    <div class="dashboard-container">
+        <div class="full-width-column">
+            <div class="calendar-header">
+                <h2 class="upcoming-title">May 2026</h2>
+                <div style="font-size: 20px;">Reference Mode</div>
+            </div>
+            <div class="calendar-grid">
+                <div class="cal-day-header">Mon</div>
+                <div class="cal-day-header">Tue</div>
+                <div class="cal-day-header">Wed</div>
+                <div class="cal-day-header">Thu</div>
+                <div class="cal-day-header">Fri</div>
+                <div class="cal-day-header">Sat</div>
+                <div class="cal-day-header">Sun</div>
+                ${daysHTML}
+            </div>
+        </div>
+    </div>`;
+}
+
+// -- CONNECT VIEW GENERATOR --
+function getConnectContent() {
+    const apps = [
+        {name: "Gradescope", icon: "📄"},
+        {name: "Blackboard", icon: "🎓"},
+        {name: "WebWork", icon: "🔢"},
+        {name: "Google Classroom", icon: "🏫"},
+        {name: "McGraw Hill", icon: "📚"}
+    ];
+
+    const appsHTML = apps.map(app => `
+        <div class="connect-row">
+            <div style="display:flex; align-items:center; gap: 15px;">
+                <span style="font-size:30px;">${app.icon}</span>
+                <span style="font-size:20px; font-weight:bold;">${app.name}</span>
+            </div>
+            <a href="#" class="btn-connect">Visit Site</a>
+        </div>
+    `).join('');
+
+    return `
+    <div class="dashboard-container">
+        <div class="full-width-column">
+            <h2 class="upcoming-title" style="margin-bottom:30px;">Connect Your Classes</h2>
+            ${appsHTML}
+        </div>
+    </div>`;
+}
+
+// --- 5. RENDER LOGIC ---
+
+function render() {
+    const root = document.getElementById('my-extension-root');
+    if (!root) return;
+
+    // 1. Generate Content based on State
+    let contentHTML = '';
+    if (currentView === 'home') contentHTML = getHomeContent();
+    else if (currentView === 'calendar') contentHTML = getCalendarContent();
+    else if (currentView === 'connect') contentHTML = getConnectContent();
+    else contentHTML = `<div class="dashboard-container"><div class="full-width-column"><h1>${currentView.toUpperCase()} View Coming Soon</h1></div></div>`;
+
+    // 2. Inject HTML (Nav + Content)
+    root.innerHTML = getNavHTML() + contentHTML;
+
+    // 3. Re-attach Event Listeners
+    attachListeners();
+}
+
+function attachListeners() {
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            currentView = item.dataset.view;
+            render(); // Re-render page with new view
+        });
     });
+}
 
-    // Choose a main mount point - Canvas's #content is usually safe.
-    let mount =
-      document.getElementById("content") ||
-      document.querySelector("#main") ||
-      document.querySelector("div[role='main']") ||
-      document.body;
+function init() {
+    if (document.getElementById('my-extension-root')) return;
+    const root = document.createElement('div');
+    root.id = 'my-extension-root';
+    document.body.appendChild(root);
+    render();
+}
 
-    // Create root wrapper for our reskinned dashboard
-    const root = document.createElement("div");
-    root.id = "uva-dashboard-reskin-root";
-    root.className = "uva-dashboard-root";
-
-    // Insert at the top of the main content
-    if (mount.firstChild) {
-      mount.insertBefore(root, mount.firstChild);
-    } else {
-      mount.appendChild(root);
-    }
-
-    // Build the entire UI in one shot so Canvas scripts are less likely to interfere
-    root.innerHTML = getDashboardMarkup();
-  }
-
-  /**
-   * Returns the HTML for the reskinned dashboard.
-   * Static data is fine for MVP – this is about layout and visual reskin.
-   */
-  function getDashboardMarkup() {
-    return `
-      <div class="uva-dashboard-wrapper">
-        <!-- Top navigation bar -->
-        <header class="uva-nav">
-          <div class="uva-nav-inner">
-            <div class="uva-nav-left">
-              <span class="uva-nav-logo">🏛️</span>
-              <button class="uva-nav-item uva-nav-item-active">Home</button>
-              <button class="uva-nav-item">Connect Your Classes</button>
-              <button class="uva-nav-item">Calendar</button>
-              <button class="uva-nav-item">Todo</button>
-            </div>
-            <div class="uva-nav-right">
-              <button class="uva-nav-item">Profile</button>
-              <button class="uva-nav-item">Settings</button>
-            </div>
-          </div>
-        </header>
-
-        <!-- Main content layout -->
-        <div class="uva-main-layout">
-          <!-- Left column: big action buttons + course list -->
-          <div class="uva-left-column">
-            <div class="uva-action-buttons-row">
-              <button class="uva-action-button" title="Messages">
-                <span class="uva-action-icon">💬</span>
-              </button>
-              <button class="uva-action-button" title="Assignments">
-                <span class="uva-action-icon">📄</span>
-              </button>
-              <button class="uva-action-button" title="Groups">
-                <span class="uva-action-icon">👥</span>
-              </button>
-              <button class="uva-action-button" title="Tasks">
-                <span class="uva-action-icon">☰</span>
-              </button>
-            </div>
-
-            <div class="uva-course-list">
-              ${getCourseCardHtml(
-                "Introduction to Computer Science",
-                "M/W/F 9:30-10:45",
-                "91%",
-                "uva-course-card-blue"
-              )}
-              ${getCourseCardHtml(
-                "New Product Development",
-                "Th 3:30-6:00",
-                "88%",
-                "uva-course-card-green"
-              )}
-              ${getCourseCardHtml(
-                "Materials Science",
-                "M/W/F 12:30-1:45",
-                "75%",
-                "uva-course-card-red"
-              )}
-              ${getCourseCardHtml(
-                "Fundamentals of Real Estate Analysis",
-                "T/Th 9:30-10:45",
-                "94%",
-                "uva-course-card-orange"
-              )}
-              ${getCourseCardHtml(
-                "Introduction to Macroeconomics",
-                "M/W/F 11:00-11:50",
-                "92%",
-                "uva-course-card-purple"
-              )}
-            </div>
-          </div>
-
-          <!-- Right column: calendar -->
-          <div class="uva-right-column">
-            <div class="uva-calendar-header">
-              <div>
-                <div class="uva-calendar-month">May 2026</div>
-                <div class="uva-calendar-weekday-row">
-                  <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
-                </div>
-              </div>
-              <label class="uva-toggle">
-                <input type="checkbox" />
-                <span class="uva-toggle-slider"></span>
-              </label>
-            </div>
-
-            <div class="uva-calendar-grid">
-              ${getCalendarGridHtml()}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-
-  /**
-   * Small helper to build a course card.
-   */
-  function getCourseCardHtml(title, time, grade, colorClass) {
-    return `
-      <div class="uva-course-card ${colorClass}">
-        <div class="uva-course-card-main">
-          <div class="uva-course-title">${title}</div>
-          <div class="uva-course-time">${time}</div>
-        </div>
-        <div class="uva-course-grade">${grade}</div>
-      </div>
-    `;
-  }
-
-  /**
-   * Basic static calendar grid based on the Figma mock.
-   * This does not try to be date-aware – it is purely a visual reskin.
-   */
-  function getCalendarGridHtml() {
-    // Map: day -> [ { label, colorClass } ]
-    const events = {
-      9: [{ label: "Midterm Exam", color: "uva-cal-pill-peach" }],
-      12: [{ label: "Project Presentation", color: "uva-cal-pill-blue" }],
-      16: [{ label: "Lab Report Due", color: "uva-cal-pill-peach" }],
-      19: [{ label: "Group Discussion", color: "uva-cal-pill-purple" }],
-      23: [{ label: "Quiz", color: "uva-cal-pill-peach" }],
-      26: [{ label: "Final Paper Due", color: "uva-cal-pill-red" }],
-      30: [{ label: "Study Group", color: "uva-cal-pill-peach" }],
-      31: [{ label: "Office Hours", color: "uva-cal-pill-blue" }] // maps to "day index 33" used below
-    };
-
-    // Figma month layout starts on Monday with 1st in first row, second column
-    const daysInMonth = 31;
-    const cells = [];
-    const totalCells = 42; // 6 weeks * 7 days
-    let currentDay = 0;
-
-    for (let i = 0; i < totalCells; i++) {
-      const colIndex = i % 7;
-      const rowIndex = Math.floor(i / 7);
-
-      // First row: leave column 0 blank, start day 1 at column 1
-      if (rowIndex === 0 && colIndex === 0) {
-        cells.push(buildEmptyDayCell());
-        continue;
-      }
-
-      if (currentDay < daysInMonth) {
-        currentDay++;
-        cells.push(buildDayCell(currentDay, events));
-      } else {
-        cells.push(buildEmptyDayCell());
-      }
-    }
-
-    return cells.join("");
-  }
-
-  function buildDayCell(dayNumber, eventsMap) {
-    // Office hours in the mock appears on the first cell of the last row, which is index 35 (0-based).
-    // Quick hack: treat "33" key as that pseudo day.
-    const pseudoKey = dayNumber === 1 && eventsMap[33] ? 33 : dayNumber;
-
-    const dayEvents = eventsMap[pseudoKey] || [];
-    const eventsHtml = dayEvents
-      .map(function (ev) {
-        return `<div class="uva-cal-pill ${ev.color}">${ev.label}</div>`;
-      })
-      .join("");
-
-    return `
-      <div class="uva-calendar-cell">
-        <div class="uva-calendar-day-number">${dayNumber}</div>
-        <div class="uva-calendar-events">
-          ${eventsHtml}
-        </div>
-      </div>
-    `;
-  }
-
-  function buildEmptyDayCell() {
-    return `
-      <div class="uva-calendar-cell uva-calendar-cell-empty">
-        <div class="uva-calendar-day-number"></div>
-      </div>
-    `;
-  }
-
-  // Kick off
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init);
-  } else {
-    init();
-  }
-})();
+// Run
+init();

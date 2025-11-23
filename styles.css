@@ -1,374 +1,170 @@
-/* styles.css */
-
-/* Scope everything under this class so we do not fight all of Canvas */
-body.uva-dashboard-reskinned {
-  background-color: #f4f6fb;
+/* --- 1. VARIABLES --- */
+:root {
+    --uva-navy: #232D4B;
+    --uva-orange: #E57200;
+    --white: #FFFFFF;
+    --gray-bg: #F5F5F5; 
+    --text-dark: #1D1B20;
+    --border-color: #E5E7EB;
 }
 
-/* Root wrapper */
-.uva-dashboard-root {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #1f2933;
+/* --- 2. OVERLAY SETUP --- */
+body { overflow: hidden !important; }
+
+#my-extension-root {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background-color: var(--gray-bg);
+    z-index: 2147483647;
+    overflow-y: auto;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
 }
 
-/* Overall page wrapper */
-.uva-dashboard-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+/* --- 3. NAVIGATION BAR --- */
+.custom-nav {
+    background-color: var(--uva-navy);
+    color: var(--white);
+    height: 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 50px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
-/* ---------- NAV BAR ---------- */
+.nav-group { display: flex; gap: 40px; align-items: center; }
 
-.uva-nav {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  background-color: #232d4b; /* UVA navy */
-  height: 72px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+.nav-item { 
+    cursor: pointer; 
+    opacity: 0.8; 
+    display: flex; 
+    align-items: center; 
+    gap: 12px; 
+    font-size: 18px; 
+    font-weight: 500;
+    transition: all 0.2s;
 }
 
-.uva-nav-inner {
-  max-width: 1280px;
-  margin: 0 auto;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 32px;
+.nav-item span { font-size: 22px; }
+.nav-item:hover { opacity: 1; color: var(--uva-orange); }
+.nav-item.active { opacity: 1; font-weight: 700; color: var(--uva-orange); border-bottom: 3px solid var(--uva-orange); padding-bottom: 5px;}
+
+/* --- 4. DASHBOARD GRID --- */
+.dashboard-container {
+    max-width: 1600px;
+    margin: 50px auto;
+    padding: 0 50px;
+    display: flex;
+    gap: 50px;
+    align-items: flex-start;
 }
 
-.uva-nav-left,
-.uva-nav-right {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+/* LEFT COLUMN (Sidebar info) */
+.left-column {
+    flex: 1; 
+    display: flex;
+    flex-direction: column;
+    gap: 35px;
 }
 
-.uva-nav-logo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 999px;
-  background-color: #e57200; /* UVA orange */
-  color: #ffffff;
-  font-size: 18px;
-  margin-right: 16px;
+/* RIGHT COLUMN (Main Content Area) */
+.right-column {
+    width: 500px; /* Default for Home View */
+    background: white;
+    padding: 40px;
+    border-radius: 30px;
+    min-height: 700px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
 }
 
-.uva-nav-item {
-  border: none;
-  background: transparent;
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #ffffff;
-  cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
-  white-space: nowrap;
+/* FULL WIDTH MODE (For Calendar/Connect pages) */
+.full-width-column {
+    flex: 3;
+    background: white;
+    padding: 40px;
+    border-radius: 30px;
+    min-height: 700px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
 }
 
-.uva-nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.12);
+/* --- 5. COMPONENT: HOME ICONS --- */
+.icon-row { display: flex; gap: 25px; justify-content: space-between; }
+.icon-card {
+    flex: 1; height: 130px;
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: 25px;
+    display: flex; justify-content: center; align-items: center;
+    font-size: 55px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+.icon-card:hover { transform: translateY(-5px); border-color: var(--uva-navy); }
+
+/* --- 6. COMPONENT: COURSE PILLS --- */
+.course-pill {
+    padding: 35px 45px;
+    border-radius: 50px;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    color: #333;
+    margin-bottom: 20px;
+    transition: transform 0.2s;
+    cursor: pointer;
+}
+.course-pill:hover { transform: scale(1.02); }
+.course-title { font-size: 26px; font-weight: 800; margin: 0; color: #222; letter-spacing: -0.5px; }
+.course-time { font-size: 16px; opacity: 0.7; margin-top: 8px; font-weight: 500; }
+.course-grade { font-size: 36px; font-weight: 800; color: #1D1B20; }
+
+/* --- 7. COMPONENT: ASSIGNMENT LIST --- */
+.upcoming-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 35px; }
+.upcoming-title { font-size: 32px; font-weight: 800; }
+.assignment-item { padding: 20px 0; border-bottom: 1px solid #eee; }
+.assignment-top-row { display: flex; justify-content: space-between; font-size: 18px; margin-bottom: 8px; color: #222; font-weight: 500; }
+.assignment-date { font-weight: normal; opacity: 0.6; font-size: 16px; }
+.assignment-course { font-size: 14px; font-weight: 700; color: var(--uva-navy); opacity: 0.8; }
+
+/* --- 8. COMPONENT: CALENDAR GRID --- */
+.calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 10px;
+}
+.cal-day-header { font-weight: bold; text-align: center; padding-bottom: 10px; color: #666; }
+.cal-cell {
+    height: 120px;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 14px;
+    position: relative;
+    background: #FAFAFA;
+}
+.cal-cell.today { background: #fff; border: 2px solid var(--uva-orange); }
+.cal-event {
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 10px;
+    margin-top: 5px;
+    font-weight: 600;
+    color: #333;
 }
 
-.uva-nav-item-active {
-  color: #e57200;
-  font-weight: 600;
+/* --- 9. COMPONENT: CONNECT CLASSES --- */
+.connect-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 25px; border: 1px solid #eee; border-radius: 15px; margin-bottom: 15px;
+    transition: 0.2s;
 }
-
-/* ---------- MAIN LAYOUT ---------- */
-
-.uva-main-layout {
-  max-width: 1280px;
-  margin: 0 auto 40px auto;
-  display: grid;
-  grid-template-columns: minmax(340px, 420px) minmax(540px, 1fr);
-  gap: 24px;
-  padding: 0 24px;
-}
-
-/* ---------- LEFT COLUMN ---------- */
-
-.uva-left-column {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-
-/* Action buttons row */
-.uva-action-buttons-row {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-}
-
-.uva-action-button {
-  background-color: #ffffff;
-  border-radius: 20px;
-  height: 120px;
-  border: 1px solid #e1e4f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-  cursor: pointer;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
-}
-
-.uva-action-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.12);
-}
-
-.uva-action-icon {
-  font-size: 30px;
-}
-
-/* Course list */
-.uva-course-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-/* Individual course card */
-.uva-course-card {
-  border-radius: 26px;
-  padding: 16px 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-  color: #111827;
-}
-
-.uva-course-card-main {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.uva-course-title {
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.uva-course-time {
-  font-size: 13px;
-  opacity: 0.9;
-}
-
-.uva-course-grade {
-  font-weight: 700;
-  font-size: 18px;
-}
-
-/* Color variants to match Figma pills */
-.uva-course-card-blue {
-  background: linear-gradient(90deg, #a0b4ff, #c4d2ff);
-}
-
-.uva-course-card-green {
-  background: linear-gradient(90deg, #b4f6ba, #d5ffd8);
-}
-
-.uva-course-card-red {
-  background: linear-gradient(90deg, #fbb7b0, #ffd1cb);
-}
-
-.uva-course-card-orange {
-  background: linear-gradient(90deg, #ffd9a4, #ffe5b9);
-}
-
-.uva-course-card-purple {
-  background: linear-gradient(90deg, #d3b2ff, #e7d0ff);
-}
-
-/* ---------- RIGHT COLUMN / CALENDAR ---------- */
-
-.uva-right-column {
-  background-color: #ffffff;
-  border-radius: 18px;
-  padding: 20px 22px 24px 22px;
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Calendar header with month and toggle */
-.uva-calendar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.uva-calendar-month {
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.uva-calendar-weekday-row {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  font-size: 12px;
-  color: #6b7280;
-}
-
-.uva-calendar-weekday-row span {
-  text-align: center;
-}
-
-/* Toggle */
-.uva-toggle {
-  position: relative;
-  display: inline-block;
-  width: 44px;
-  height: 24px;
-}
-
-.uva-toggle input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.uva-toggle-slider {
-  position: absolute;
-  cursor: pointer;
-  inset: 0;
-  background-color: #e5e7eb;
-  border-radius: 999px;
-  transition: background-color 0.15s ease;
-}
-
-.uva-toggle-slider::before {
-  content: "";
-  position: absolute;
-  height: 17px;
-  width: 17px;
-  left: 4px;
-  top: 3.5px;
-  background-color: #ffffff;
-  border-radius: 50%;
-  transition: transform 0.15s ease;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.4);
-}
-
-.uva-toggle input:checked + .uva-toggle-slider {
-  background-color: #22c55e;
-}
-
-.uva-toggle input:checked + .uva-toggle-slider::before {
-  transform: translateX(16px);
-}
-
-/* Calendar grid */
-.uva-calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-auto-rows: 80px;
-  gap: 4px;
-  font-size: 12px;
-}
-
-/* Individual cells */
-.uva-calendar-cell {
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 4px 4px 6px 4px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background-color: #ffffff;
-}
-
-.uva-calendar-cell-empty {
-  background-color: #f9fafb;
-}
-
-.uva-calendar-day-number {
-  font-size: 12px;
-  font-weight: 600;
-  color: #4b5563;
-}
-
-.uva-calendar-events {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-/* Event pills */
-.uva-cal-pill {
-  border-radius: 999px;
-  padding: 2px 6px;
-  font-size: 10px;
-  font-weight: 500;
-  width: max-content;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Color variants for event pills */
-.uva-cal-pill-peach {
-  background-color: #ffd7ae;
-  color: #92400e;
-}
-
-.uva-cal-pill-blue {
-  background-color: #c7ddff;
-  color: #1d4ed8;
-}
-
-.uva-cal-pill-purple {
-  background-color: #e3d4ff;
-  color: #6b21a8;
-}
-
-.uva-cal-pill-red {
-  background-color: #fecaca;
-  color: #b91c1c;
-}
-
-/* ---------- RESPONSIVE TWEAKS ---------- */
-
-@media (max-width: 1024px) {
-  .uva-main-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .uva-right-column {
-    order: 2;
-  }
-}
-
-@media (max-width: 640px) {
-  .uva-nav-inner {
-    padding: 0 16px;
-  }
-
-  .uva-nav-left {
-    gap: 8px;
-  }
-
-  .uva-nav-item {
-    padding-inline: 8px;
-    font-size: 13px;
-  }
-
-  .uva-main-layout {
-    padding: 0 12px;
-  }
-
-  .uva-action-buttons-row {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.connect-row:hover { border-color: var(--uva-navy); background: #f9f9ff; }
+.btn-connect {
+    background: var(--uva-navy); color: white; padding: 10px 20px;
+    border-radius: 8px; text-decoration: none; font-weight: bold;
 }
