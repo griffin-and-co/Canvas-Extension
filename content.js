@@ -1,397 +1,265 @@
 // content.js
-// Canvas UVA Reskin - safer version that won't blank the page if something fails
 
+// Immediately-invoked function to avoid leaking variables
 (function () {
-  // Prevent double-running
-  if (window.__uvaCanvasReskinLoaded) return;
-  window.__uvaCanvasReskinLoaded = true;
+  /**
+   * Entry point. Only runs on the main Canvas dashboard.
+   * Guards prevent this from touching course pages, etc. for now.
+   */
+  function init() {
+    // Heuristic: dashboard has these containers
+    const isDashboard =
+      document.getElementById("dashboard-planner") ||
+      document.getElementById("DashboardCard_Container") ||
+      document.getElementById("dashboard-activity");
 
-  const HOST = "canvas.its.virginia.edu";
+    if (!isDashboard) return;
 
-  // Run when DOM is ready
-  function onReady(fn) {
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", fn);
-    } else {
-      fn();
-    }
+    // Wait a bit for Canvas to finish its own DOM work, then reskin.
+    // This keeps us from fighting their JS.
+    setTimeout(applyReskin, 1000);
   }
 
-  onReady(initReskin);
+  /**
+   * Hides the default dashboard blocks and injects our custom layout.
+   */
+  function applyReskin() {
+    // Do not inject twice
+    if (document.getElementById("uva-dashboard-reskin-root")) return;
 
-  function initReskin() {
-    try {
-      if (location.host !== HOST) return;
+    // Add flag to body so styles can scope off it if needed
+    document.body.classList.add("uva-dashboard-reskinned");
 
-      // We only want to reskin the main dashboard page.
-      // On UVA Canvas, that's the root URL "/".
-      const path = location.pathname || "/";
-      if (path !== "/" && path !== "/dashboard") {
-        return;
-      }
-
-      // Grab the main Canvas app container so we can hide (not delete) it
-      const appRoot =
-        document.querySelector("#application") ||
-        document.querySelector("#main") ||
-        document.body;
-
-      if (!appRoot) return;
-
-      const courses = scrapeCourses();
-      const todos = scrapeTodoItems();
-
-      // Build our new UI
-      const overlay = buildReskinRoot(courses, todos);
-
-      // Hide Canvas, add overlay
-      appRoot.style.display = "none";
-      document.body.appendChild(overlay);
-
-      // Wire up interactions
-      wireInteractions(overlay, courses);
-    } catch (err) {
-      console.error("[UVA Canvas Reskin] Failed to initialize:", err);
-      // If anything blows up, do nothing and keep default Canvas visible
-    }
-  }
-
-  // -----------------------------
-  // SCRAPING
-  // -----------------------------
-
-  function scrapeCourses() {
-    const result = [];
-
-    // Old Canvas card selector
-    const dashboardCards = document.querySelectorAll(
-      ".ic-DashboardCard, .ic-DashboardCard__box"
-    );
-
-    // Newer Canvas course links sometimes use this data-testid
-    const cardLinks = document.querySelectorAll(
-      '[data-testid="course-card-link"]'
-    );
-
-    if (dashboardCards.length) {
-      dashboardCards.forEach((card) => {
-        try {
-          const link =
-            card.querySelector("a.ic-DashboardCard__link") ||
-            card.querySelector("a[href*='/courses/']");
-          if (!link) return;
-
-          const nameEl =
-            card.querySelector(".ic-DashboardCard__header-title") ||
-            card.querySelector(".ic-DashboardCard__title") ||
-            link;
-
-          const subtitleEl =
-            card.querySelector(".ic-DashboardCard__header-term") ||
-            card.querySelector(".course-list-term");
-
-          result.push({
-            name: (nameEl.textContent || "").trim() || "Course",
-            subtitle: (subtitleEl && subtitleEl.textContent.trim()) || "",
-            href: link.href,
-          });
-        } catch (e) {
-          console.warn("[UVA Canvas Reskin] Failed to parse course card", e);
-        }
-      });
-    } else if (cardLinks.length) {
-      cardLinks.forEach((link) => {
-        try {
-          const name = (link.textContent || "").trim() || "Course";
-          result.push({
-            name,
-            subtitle: "",
-            href: link.href,
-          });
-        } catch (e) {
-          console.warn(
-            "[UVA Canvas Reskin] Failed to parse course card (new UI)",
-            e
-          );
-        }
-      });
-    }
-
-    // Fallback if nothing scraped
-    if (!result.length) {
-      console.warn(
-        "[UVA Canvas Reskin] No course cards found. Using placeholder data."
-      );
-      return [
-        {
-          name: "Example Course 1",
-          subtitle: "M/W/F 9:30-10:45",
-          href: "#",
-        },
-        {
-          name: "Example Course 2",
-          subtitle: "T/Th 3:30-6:00",
-          href: "#",
-        },
-      ];
-    }
-
-    return result;
-  }
-
-  function scrapeTodoItems() {
-    const items = [];
-
-    // Try multiple likely structures for Canvas "To Do" sidebar
-    const todoContainers = [
-      document.querySelector("#right-side .to-do-list"),
-      document.querySelector("#right-side .ToDoSidebar"),
-      document.querySelector(".ic-RightSidebar .to-do-list"),
-      document.querySelector(".ic-RightSidebar"),
-    ].filter(Boolean);
-
-    const container = todoContainers[0];
-    if (!container) {
-      console.warn(
-        "[UVA Canvas Reskin] No To Do container found. Calendar will be empty."
-      );
-      return items;
-    }
-
-    const links = container.querySelectorAll("a[href]");
-    links.forEach((link) => {
-      try {
-        const text = (link.textContent || "").trim();
-        if (!text) return;
-
-        // Look for a due date nearby
-        const li = link.closest("li, .ToDoSidebarItem");
-        let dateText = "";
-        if (li) {
-          const dateEl =
-            li.querySelector("time") ||
-            li.querySelector(".item_due") ||
-            li.querySelector(".ToDoDate");
-          if (dateEl) {
-            dateText = (dateEl.textContent || "").trim();
-          }
-        }
-
-        items.push({
-          title: text,
-          date: dateText,
-          href: link.href,
-        });
-      } catch (e) {
-        console.warn("[UVA Canvas Reskin] Failed to parse To Do item", e);
+    // Hide core dashboard containers (planner stream, cards, activity)
+    [
+      "dashboard_header_container",
+      "dashboard-planner",
+      "dashboard-activity",
+      "DashboardCard_Container"
+    ].forEach(function (id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.style.display = "none";
       }
     });
 
-    return items;
+    // Choose a main mount point - Canvas's #content is usually safe.
+    let mount =
+      document.getElementById("content") ||
+      document.querySelector("#main") ||
+      document.querySelector("div[role='main']") ||
+      document.body;
+
+    // Create root wrapper for our reskinned dashboard
+    const root = document.createElement("div");
+    root.id = "uva-dashboard-reskin-root";
+    root.className = "uva-dashboard-root";
+
+    // Insert at the top of the main content
+    if (mount.firstChild) {
+      mount.insertBefore(root, mount.firstChild);
+    } else {
+      mount.appendChild(root);
+    }
+
+    // Build the entire UI in one shot so Canvas scripts are less likely to interfere
+    root.innerHTML = getDashboardMarkup();
   }
 
-  // -----------------------------
-  // BUILDING THE RESKIN UI
-  // -----------------------------
-
-  function buildReskinRoot(courses, todos) {
-    const root = document.createElement("div");
-    root.id = "uva-reskin-root";
-
-    // Simple mapping to pastel classes for courses
-    const pastelClasses = [
-      "uva-course-card-blue",
-      "uva-course-card-green",
-      "uva-course-card-pink",
-      "uva-course-card-orange",
-      "uva-course-card-purple",
-    ];
-
-    const courseCardsHTML = courses
-      .slice(0, 5)
-      .map((course, idx) => {
-        const pastelClass =
-          pastelClasses[idx % pastelClasses.length] || pastelClasses[0];
-        return `
-          <button class="uva-course-card ${pastelClass}" data-course-index="${idx}">
-            <div class="uva-course-name">${escapeHtml(course.name)}</div>
-            ${
-              course.subtitle
-                ? `<div class="uva-course-subtitle">${escapeHtml(
-                    course.subtitle
-                  )}</div>`
-                : ""
-            }
-            <div class="uva-course-grade">--</div>
-          </button>
-        `;
-      })
-      .join("");
-
-    const todoHTML =
-      todos && todos.length
-        ? todos
-            .slice(0, 7)
-            .map(
-              (item, i) => `
-          <div class="uva-event-pill" data-todo-index="${i}">
-            <div class="uva-event-title">${escapeHtml(item.title)}</div>
-            ${
-              item.date
-                ? `<div class="uva-event-date">${escapeHtml(item.date)}</div>`
-                : ""
-            }
-          </div>`
-            )
-            .join("")
-        : `<div class="uva-empty-state">No upcoming items detected.</div>`;
-
-    root.innerHTML = `
-      <div class="uva-reskin">
-        <!-- Top nav bar -->
+  /**
+   * Returns the HTML for the reskinned dashboard.
+   * Static data is fine for MVP – this is about layout and visual reskin.
+   */
+  function getDashboardMarkup() {
+    return `
+      <div class="uva-dashboard-wrapper">
+        <!-- Top navigation bar -->
         <header class="uva-nav">
-          <div class="uva-nav-left">
-            <span class="uva-logo-icon">🏠</span>
-            <span class="uva-logo-text">Home</span>
-          </div>
-          <nav class="uva-nav-center">
-            <button class="uva-nav-link uva-nav-link-active">Home</button>
-            <button class="uva-nav-link">Connect Your Classes</button>
-            <button class="uva-nav-link">Calendar</button>
-            <button class="uva-nav-link">Todo</button>
-          </nav>
-          <div class="uva-nav-right">
-            <button class="uva-nav-profile">Profile</button>
-            <button class="uva-nav-settings">Settings</button>
+          <div class="uva-nav-inner">
+            <div class="uva-nav-left">
+              <span class="uva-nav-logo">🏛️</span>
+              <button class="uva-nav-item uva-nav-item-active">Home</button>
+              <button class="uva-nav-item">Connect Your Classes</button>
+              <button class="uva-nav-item">Calendar</button>
+              <button class="uva-nav-item">Todo</button>
+            </div>
+            <div class="uva-nav-right">
+              <button class="uva-nav-item">Profile</button>
+              <button class="uva-nav-item">Settings</button>
+            </div>
           </div>
         </header>
 
-        <main class="uva-layout">
-          <section class="uva-left-pane">
-            <!-- Action buttons -->
-            <div class="uva-action-row">
-              <button class="uva-action-btn" data-action="messages">
-                <div class="uva-action-icon">💬</div>
+        <!-- Main content layout -->
+        <div class="uva-main-layout">
+          <!-- Left column: big action buttons + course list -->
+          <div class="uva-left-column">
+            <div class="uva-action-buttons-row">
+              <button class="uva-action-button" title="Messages">
+                <span class="uva-action-icon">💬</span>
               </button>
-              <button class="uva-action-btn" data-action="files">
-                <div class="uva-action-icon">📄</div>
+              <button class="uva-action-button" title="Assignments">
+                <span class="uva-action-icon">📄</span>
               </button>
-              <button class="uva-action-btn" data-action="groups">
-                <div class="uva-action-icon">👥</div>
+              <button class="uva-action-button" title="Groups">
+                <span class="uva-action-icon">👥</span>
               </button>
-              <button class="uva-action-btn" data-action="list">
-                <div class="uva-action-icon">☰</div>
+              <button class="uva-action-button" title="Tasks">
+                <span class="uva-action-icon">☰</span>
               </button>
             </div>
 
-            <!-- Course list -->
             <div class="uva-course-list">
-              ${courseCardsHTML}
+              ${getCourseCardHtml(
+                "Introduction to Computer Science",
+                "M/W/F 9:30-10:45",
+                "91%",
+                "uva-course-card-blue"
+              )}
+              ${getCourseCardHtml(
+                "New Product Development",
+                "Th 3:30-6:00",
+                "88%",
+                "uva-course-card-green"
+              )}
+              ${getCourseCardHtml(
+                "Materials Science",
+                "M/W/F 12:30-1:45",
+                "75%",
+                "uva-course-card-red"
+              )}
+              ${getCourseCardHtml(
+                "Fundamentals of Real Estate Analysis",
+                "T/Th 9:30-10:45",
+                "94%",
+                "uva-course-card-orange"
+              )}
+              ${getCourseCardHtml(
+                "Introduction to Macroeconomics",
+                "M/W/F 11:00-11:50",
+                "92%",
+                "uva-course-card-purple"
+              )}
             </div>
-          </section>
+          </div>
 
-          <section class="uva-right-pane">
-            <div class="uva-calendar-header-row">
-              <h2 class="uva-calendar-title">May 2026</h2>
+          <!-- Right column: calendar -->
+          <div class="uva-right-column">
+            <div class="uva-calendar-header">
+              <div>
+                <div class="uva-calendar-month">May 2026</div>
+                <div class="uva-calendar-weekday-row">
+                  <span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span><span>Su</span>
+                </div>
+              </div>
+              <label class="uva-toggle">
+                <input type="checkbox" />
+                <span class="uva-toggle-slider"></span>
+              </label>
             </div>
+
             <div class="uva-calendar-grid">
-              <div class="uva-calendar-weekdays">
-                <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
-              </div>
-              <div class="uva-calendar-days">
-                ${buildCalendarSkeleton()}
-              </div>
+              ${getCalendarGridHtml()}
             </div>
-            <div class="uva-calendar-events">
-              ${todoHTML}
-            </div>
-          </section>
-        </main>
+          </div>
+        </div>
       </div>
     `;
-
-    return root;
   }
 
-  function buildCalendarSkeleton() {
-    // Simple 5x7 skeleton like your mock; we are not mapping real dates yet.
-    const days = [];
-    for (let i = 1; i <= 35; i++) {
-      days.push(`<div class="uva-calendar-day">${i <= 31 ? i : ""}</div>`);
+  /**
+   * Small helper to build a course card.
+   */
+  function getCourseCardHtml(title, time, grade, colorClass) {
+    return `
+      <div class="uva-course-card ${colorClass}">
+        <div class="uva-course-card-main">
+          <div class="uva-course-title">${title}</div>
+          <div class="uva-course-time">${time}</div>
+        </div>
+        <div class="uva-course-grade">${grade}</div>
+      </div>
+    `;
+  }
+
+  /**
+   * Basic static calendar grid based on the Figma mock.
+   * This does not try to be date-aware – it is purely a visual reskin.
+   */
+  function getCalendarGridHtml() {
+    // Map: day -> [ { label, colorClass } ]
+    const events = {
+      9: [{ label: "Midterm Exam", color: "uva-cal-pill-peach" }],
+      12: [{ label: "Project Presentation", color: "uva-cal-pill-blue" }],
+      16: [{ label: "Lab Report Due", color: "uva-cal-pill-peach" }],
+      19: [{ label: "Group Discussion", color: "uva-cal-pill-purple" }],
+      23: [{ label: "Quiz", color: "uva-cal-pill-peach" }],
+      26: [{ label: "Final Paper Due", color: "uva-cal-pill-red" }],
+      30: [{ label: "Study Group", color: "uva-cal-pill-peach" }],
+      2 + 31: [{ label: "Office Hours", color: "uva-cal-pill-blue" }] // maps to "day index 33" used below
+    };
+
+    // Figma month layout starts on Monday with 1st in first row, second column
+    const daysInMonth = 31;
+    const cells = [];
+    const totalCells = 42; // 6 weeks * 7 days
+    let currentDay = 0;
+
+    for (let i = 0; i < totalCells; i++) {
+      const colIndex = i % 7;
+      const rowIndex = Math.floor(i / 7);
+
+      // First row: leave column 0 blank, start day 1 at column 1
+      if (rowIndex === 0 && colIndex === 0) {
+        cells.push(buildEmptyDayCell());
+        continue;
+      }
+
+      if (currentDay < daysInMonth) {
+        currentDay++;
+        cells.push(buildDayCell(currentDay, events));
+      } else {
+        cells.push(buildEmptyDayCell());
+      }
     }
-    return days.join("");
+
+    return cells.join("");
   }
 
-  // -----------------------------
-  // INTERACTIONS
-  // -----------------------------
+  function buildDayCell(dayNumber, eventsMap) {
+    // Office hours in the mock appears on the first cell of the last row, which is index 35 (0-based).
+    // Quick hack: treat "33" key as that pseudo day.
+    const pseudoKey = dayNumber === 1 && eventsMap[33] ? 33 : dayNumber;
 
-  function wireInteractions(root, courses) {
-    // Action buttons: messages + groups routing
-    root
-      .querySelectorAll(".uva-action-btn")
-      .forEach((btn) =>
-        btn.addEventListener("click", () => handleActionClick(btn))
-      );
+    const dayEvents = eventsMap[pseudoKey] || [];
+    const eventsHtml = dayEvents
+      .map(function (ev) {
+        return `<div class="uva-cal-pill ${ev.color}">${ev.label}</div>`;
+      })
+      .join("");
 
-    // Course cards: navigate to course
-    root.querySelectorAll(".uva-course-card").forEach((card) => {
-      card.addEventListener("click", () => {
-        const idxStr = card.getAttribute("data-course-index");
-        const idx = idxStr ? parseInt(idxStr, 10) : NaN;
-        if (!Number.isNaN(idx) && courses[idx] && courses[idx].href) {
-          window.location.href = courses[idx].href;
-        }
-      });
-    });
-
-    // Todo events: open original link if we captured it
-    const todos = scrapeTodoItems(); // re-use scraped list for hrefs
-    root.querySelectorAll("[data-todo-index]").forEach((pill) => {
-      pill.addEventListener("click", () => {
-        const idxStr = pill.getAttribute("data-todo-index");
-        const idx = idxStr ? parseInt(idxStr, 10) : NaN;
-        if (!Number.isNaN(idx) && todos[idx] && todos[idx].href) {
-          window.location.href = todos[idx].href;
-        }
-      });
-    });
+    return `
+      <div class="uva-calendar-cell">
+        <div class="uva-calendar-day-number">${dayNumber}</div>
+        <div class="uva-calendar-events">
+          ${eventsHtml}
+        </div>
+      </div>
+    `;
   }
 
-  function handleActionClick(btn) {
-    const action = btn.getAttribute("data-action");
-    if (!action) return;
-
-    switch (action) {
-      case "messages":
-        window.location.href = "https://canvas.its.virginia.edu/conversations";
-        break;
-      case "groups":
-        window.location.href = "https://canvas.its.virginia.edu/groups";
-        break;
-      case "files":
-        // You can point this at whatever makes sense later
-        window.location.href = "https://canvas.its.virginia.edu/files";
-        break;
-      case "list":
-        // Maybe a todo or list view later
-        window.location.href = "https://canvas.its.virginia.edu/calendar";
-        break;
-      default:
-        break;
-    }
+  function buildEmptyDayCell() {
+    return `
+      <div class="uva-calendar-cell uva-calendar-cell-empty">
+        <div class="uva-calendar-day-number"></div>
+      </div>
+    `;
   }
 
-  // -----------------------------
-  // UTIL
-  // -----------------------------
-
-  function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
+  // Kick off
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
   }
 })();
