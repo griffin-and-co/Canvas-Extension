@@ -1,493 +1,397 @@
 // content.js
-// Inject a reskinned Canvas dashboard on the main dashboard page.
-// - Hides the default Canvas dashboard grid
-// - Builds a custom layout based on your Figma mockups
-// - Populates courses from the real dashboard cards
-// - Populates calendar events from the Canvas planner API
+// Canvas UVA Reskin - safer version that won't blank the page if something fails
 
 (function () {
-  if (window.hasRunUvaCanvasReskin) return;
-  window.hasRunUvaCanvasReskin = true;
+  // Prevent double-running
+  if (window.__uvaCanvasReskinLoaded) return;
+  window.__uvaCanvasReskinLoaded = true;
+
+  const HOST = "canvas.its.virginia.edu";
 
   // Run when DOM is ready
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initReskin);
-  } else {
-    initReskin();
+  function onReady(fn) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", fn);
+    } else {
+      fn();
+    }
   }
 
-  const state = {
-    month: null,
-    year: null,
-    calendarGridEl: null,
-    courses: [],
-    events: []
-  };
+  onReady(initReskin);
 
   function initReskin() {
-    // Only act on the main Canvas dashboard
-    const url = window.location.href;
-    //if (!url.includes("/dashboard")) return;
+    try {
+      if (location.host !== HOST) return;
 
-    // Best effort: hide the stock dashboard cards so our reskin dominates
-    hideNativeDashboard();
-
-    // Scrape existing dashboard content to get dynamic data
-    state.courses = scrapeCoursesFromDashboardDom();
-
-    // Build the reskinned UI shell
-    const root = buildReskinShell(state.courses);
-
-    // Attach nav button routing
-    wireNavigationButtons(root);
-
-    // Fetch calendar events and render into the calendar
-    fetchUpcomingEvents()
-      .then((events) => {
-        state.events = events;
-        renderCalendarEvents();
-      })
-      .catch((err) => {
-        console.error("[Canvas Reskin] Failed to fetch planner items", err);
-      });
-  }
-
-  // ------------------------------------------------------------
-  // Native Canvas DOM helpers
-  // ------------------------------------------------------------
-
-  function hideNativeDashboard() {
-    // Common Canvas containers for the dashboard card grid / content
-    const selectors = [
-      "#DashboardCard_Container",
-      ".ic-DashboardCard__box",
-      "#DashboardContainer",
-      "#dashboard",
-      ".ic-Dashboard-content"
-    ];
-
-    selectors.forEach((sel) => {
-      const el = document.querySelector(sel);
-      if (el) {
-        el.style.display = "none";
+      // We only want to reskin the main dashboard page.
+      // On UVA Canvas, that's the root URL "/".
+      const path = location.pathname || "/";
+      if (path !== "/" && path !== "/dashboard") {
+        return;
       }
-    });
+
+      // Grab the main Canvas app container so we can hide (not delete) it
+      const appRoot =
+        document.querySelector("#application") ||
+        document.querySelector("#main") ||
+        document.body;
+
+      if (!appRoot) return;
+
+      const courses = scrapeCourses();
+      const todos = scrapeTodoItems();
+
+      // Build our new UI
+      const overlay = buildReskinRoot(courses, todos);
+
+      // Hide Canvas, add overlay
+      appRoot.style.display = "none";
+      document.body.appendChild(overlay);
+
+      // Wire up interactions
+      wireInteractions(overlay, courses);
+    } catch (err) {
+      console.error("[UVA Canvas Reskin] Failed to initialize:", err);
+      // If anything blows up, do nothing and keep default Canvas visible
+    }
   }
 
-  function scrapeCoursesFromDashboardDom() {
-    const courses = [];
-    // Standard Canvas dashboard card selector
-    const cardNodes = document.querySelectorAll(".ic-DashboardCard");
+  // -----------------------------
+  // SCRAPING
+  // -----------------------------
 
-    cardNodes.forEach((card) => {
+  function scrapeCourses() {
+    const result = [];
+
+    // Old Canvas card selector
+    const dashboardCards = document.querySelectorAll(
+      ".ic-DashboardCard, .ic-DashboardCard__box"
+    );
+
+    // Newer Canvas course links sometimes use this data-testid
+    const cardLinks = document.querySelectorAll(
+      '[data-testid="course-card-link"]'
+    );
+
+    if (dashboardCards.length) {
+      dashboardCards.forEach((card) => {
+        try {
+          const link =
+            card.querySelector("a.ic-DashboardCard__link") ||
+            card.querySelector("a[href*='/courses/']");
+          if (!link) return;
+
+          const nameEl =
+            card.querySelector(".ic-DashboardCard__header-title") ||
+            card.querySelector(".ic-DashboardCard__title") ||
+            link;
+
+          const subtitleEl =
+            card.querySelector(".ic-DashboardCard__header-term") ||
+            card.querySelector(".course-list-term");
+
+          result.push({
+            name: (nameEl.textContent || "").trim() || "Course",
+            subtitle: (subtitleEl && subtitleEl.textContent.trim()) || "",
+            href: link.href,
+          });
+        } catch (e) {
+          console.warn("[UVA Canvas Reskin] Failed to parse course card", e);
+        }
+      });
+    } else if (cardLinks.length) {
+      cardLinks.forEach((link) => {
+        try {
+          const name = (link.textContent || "").trim() || "Course";
+          result.push({
+            name,
+            subtitle: "",
+            href: link.href,
+          });
+        } catch (e) {
+          console.warn(
+            "[UVA Canvas Reskin] Failed to parse course card (new UI)",
+            e
+          );
+        }
+      });
+    }
+
+    // Fallback if nothing scraped
+    if (!result.length) {
+      console.warn(
+        "[UVA Canvas Reskin] No course cards found. Using placeholder data."
+      );
+      return [
+        {
+          name: "Example Course 1",
+          subtitle: "M/W/F 9:30-10:45",
+          href: "#",
+        },
+        {
+          name: "Example Course 2",
+          subtitle: "T/Th 3:30-6:00",
+          href: "#",
+        },
+      ];
+    }
+
+    return result;
+  }
+
+  function scrapeTodoItems() {
+    const items = [];
+
+    // Try multiple likely structures for Canvas "To Do" sidebar
+    const todoContainers = [
+      document.querySelector("#right-side .to-do-list"),
+      document.querySelector("#right-side .ToDoSidebar"),
+      document.querySelector(".ic-RightSidebar .to-do-list"),
+      document.querySelector(".ic-RightSidebar"),
+    ].filter(Boolean);
+
+    const container = todoContainers[0];
+    if (!container) {
+      console.warn(
+        "[UVA Canvas Reskin] No To Do container found. Calendar will be empty."
+      );
+      return items;
+    }
+
+    const links = container.querySelectorAll("a[href]");
+    links.forEach((link) => {
       try {
-        const link =
-          card.querySelector("a.ic-DashboardCard__link") ||
-          card.querySelector("a");
+        const text = (link.textContent || "").trim();
+        if (!text) return;
 
-        const titleEl = card.querySelector(
-          ".ic-DashboardCard__header-title, .ic-DashboardCard__header-text"
-        );
-        const codeEl = card.querySelector(
-          ".ic-DashboardCard__header-subtitle, .ic-DashboardCard__header-term"
-        );
-        const gradeEl = card.querySelector(
-          ".ic-DashboardCard__progress .progress_score, .ic-DashboardCard__grade"
-        );
+        // Look for a due date nearby
+        const li = link.closest("li, .ToDoSidebarItem");
+        let dateText = "";
+        if (li) {
+          const dateEl =
+            li.querySelector("time") ||
+            li.querySelector(".item_due") ||
+            li.querySelector(".ToDoDate");
+          if (dateEl) {
+            dateText = (dateEl.textContent || "").trim();
+          }
+        }
 
-        const title = (titleEl && titleEl.textContent.trim()) || "Untitled course";
-        const code = (codeEl && codeEl.textContent.trim()) || "";
-        const gradeRaw = gradeEl ? gradeEl.textContent.trim() : "";
-        const grade =
-          gradeRaw &&
-          (gradeRaw.includes("%") ? gradeRaw : gradeRaw.replace(/\s+/g, " "));
-        const url = link ? link.href : null;
-
-        courses.push({
-          title,
-          code,
-          grade: grade || "--",
-          url
+        items.push({
+          title: text,
+          date: dateText,
+          href: link.href,
         });
       } catch (e) {
-        console.warn("[Canvas Reskin] Failed to parse a course card", e);
+        console.warn("[UVA Canvas Reskin] Failed to parse To Do item", e);
       }
     });
 
-    // If for some reason nothing detected, provide at least a dummy item
-    if (!courses.length) {
-      courses.push({
-        title: "Example Course",
-        code: "M/W/F 9:30–10:45",
-        grade: "92%",
-        url: null
-      });
-    }
-
-    // Limit to 5 like your mock
-    return courses.slice(0, 5);
+    return items;
   }
 
-  // ------------------------------------------------------------
-  // Planner / calendar data
-  // ------------------------------------------------------------
+  // -----------------------------
+  // BUILDING THE RESKIN UI
+  // -----------------------------
 
-  async function fetchUpcomingEvents() {
-    const today = new Date();
-    const start = new Date(today.getFullYear(), today.getMonth(), 1);
-    const end = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
-
-    const startISO = start.toISOString();
-    const endISO = end.toISOString();
-
-    // Canvas planner API (works from same-origin extension)
-    const url = `/api/v1/planner/items?start_date=${encodeURIComponent(
-      startISO
-    )}&end_date=${encodeURIComponent(endISO)}`;
-
-    const res = await fetch(url, {
-      credentials: "include"
-    });
-
-    if (!res.ok) {
-      console.warn(
-        "[Canvas Reskin] Planner API not accessible, status:",
-        res.status
-      );
-      return [];
-    }
-
-    const raw = await res.json();
-
-    const events = [];
-
-    raw.forEach((item) => {
-      const plannable = item.plannable || {};
-      const due =
-        plannable.due_at ||
-        plannable.all_day_date ||
-        plannable.todo_date ||
-        item.plannable_date;
-
-      if (!due) return;
-
-      const date = new Date(due);
-      const title =
-        plannable.title || item.title || plannable.assignment && plannable.assignment.name || "Item";
-      const context =
-        item.context_name ||
-        (plannable.course && plannable.course.name) ||
-        "";
-
-      events.push({
-        title,
-        course: context,
-        date
-      });
-    });
-
-    return events;
-  }
-
-  // ------------------------------------------------------------
-  // Reskin shell builders
-  // ------------------------------------------------------------
-
-  function buildReskinShell(courses) {
-    const existingRoot = document.getElementById("uva-canvas-reskin-root");
-    if (existingRoot) {
-      existingRoot.remove();
-    }
-
+  function buildReskinRoot(courses, todos) {
     const root = document.createElement("div");
-    root.id = "uva-canvas-reskin-root";
+    root.id = "uva-reskin-root";
 
-    // Top navigation bar (matches your Figma)
-    const nav = document.createElement("div");
-    nav.className = "uva-reskin-nav";
+    // Simple mapping to pastel classes for courses
+    const pastelClasses = [
+      "uva-course-card-blue",
+      "uva-course-card-green",
+      "uva-course-card-pink",
+      "uva-course-card-orange",
+      "uva-course-card-purple",
+    ];
 
-    const leftNavGroup = document.createElement("div");
-    leftNavGroup.className = "uva-reskin-nav-left";
+    const courseCardsHTML = courses
+      .slice(0, 5)
+      .map((course, idx) => {
+        const pastelClass =
+          pastelClasses[idx % pastelClasses.length] || pastelClasses[0];
+        return `
+          <button class="uva-course-card ${pastelClass}" data-course-index="${idx}">
+            <div class="uva-course-name">${escapeHtml(course.name)}</div>
+            ${
+              course.subtitle
+                ? `<div class="uva-course-subtitle">${escapeHtml(
+                    course.subtitle
+                  )}</div>`
+                : ""
+            }
+            <div class="uva-course-grade">--</div>
+          </button>
+        `;
+      })
+      .join("");
 
-    leftNavGroup.appendChild(createNavItem("Home", "home"));
+    const todoHTML =
+      todos && todos.length
+        ? todos
+            .slice(0, 7)
+            .map(
+              (item, i) => `
+          <div class="uva-event-pill" data-todo-index="${i}">
+            <div class="uva-event-title">${escapeHtml(item.title)}</div>
+            ${
+              item.date
+                ? `<div class="uva-event-date">${escapeHtml(item.date)}</div>`
+                : ""
+            }
+          </div>`
+            )
+            .join("")
+        : `<div class="uva-empty-state">No upcoming items detected.</div>`;
 
-    // Middle nav (Connect, Calendar, Todo)
-    const centerNavGroup = document.createElement("div");
-    centerNavGroup.className = "uva-reskin-nav-center";
-    centerNavGroup.appendChild(
-      createNavItem("Connect Your Classes", "connect-classes")
-    );
-    centerNavGroup.appendChild(createNavItem("Calendar", "calendar"));
-    centerNavGroup.appendChild(createNavItem("Todo", "todo"));
+    root.innerHTML = `
+      <div class="uva-reskin">
+        <!-- Top nav bar -->
+        <header class="uva-nav">
+          <div class="uva-nav-left">
+            <span class="uva-logo-icon">🏠</span>
+            <span class="uva-logo-text">Home</span>
+          </div>
+          <nav class="uva-nav-center">
+            <button class="uva-nav-link uva-nav-link-active">Home</button>
+            <button class="uva-nav-link">Connect Your Classes</button>
+            <button class="uva-nav-link">Calendar</button>
+            <button class="uva-nav-link">Todo</button>
+          </nav>
+          <div class="uva-nav-right">
+            <button class="uva-nav-profile">Profile</button>
+            <button class="uva-nav-settings">Settings</button>
+          </div>
+        </header>
 
-    const rightNavGroup = document.createElement("div");
-    rightNavGroup.className = "uva-reskin-nav-right";
-    rightNavGroup.appendChild(createNavItem("Profile", "profile"));
-    rightNavGroup.appendChild(createNavItem("Settings", "settings"));
+        <main class="uva-layout">
+          <section class="uva-left-pane">
+            <!-- Action buttons -->
+            <div class="uva-action-row">
+              <button class="uva-action-btn" data-action="messages">
+                <div class="uva-action-icon">💬</div>
+              </button>
+              <button class="uva-action-btn" data-action="files">
+                <div class="uva-action-icon">📄</div>
+              </button>
+              <button class="uva-action-btn" data-action="groups">
+                <div class="uva-action-icon">👥</div>
+              </button>
+              <button class="uva-action-btn" data-action="list">
+                <div class="uva-action-icon">☰</div>
+              </button>
+            </div>
 
-    nav.appendChild(leftNavGroup);
-    nav.appendChild(centerNavGroup);
-    nav.appendChild(rightNavGroup);
+            <!-- Course list -->
+            <div class="uva-course-list">
+              ${courseCardsHTML}
+            </div>
+          </section>
 
-    // Main content wrapper (course list + calendar)
-    const main = document.createElement("div");
-    main.className = "uva-reskin-main";
-
-    const leftCol = document.createElement("div");
-    leftCol.className = "uva-reskin-left-column";
-
-    const actionRow = document.createElement("div");
-    actionRow.className = "uva-reskin-action-row";
-
-    // Four big icon tiles – add IDs so we can wire routing later
-    actionRow.appendChild(
-      createActionButton("Messages", "💬", "messages", "reskin-btn-messages")
-    );
-    actionRow.appendChild(
-      createActionButton("Assignments", "📄", "assignments", "reskin-btn-assignments")
-    );
-    actionRow.appendChild(
-      createActionButton("Groups", "👥", "groups", "reskin-btn-groups")
-    );
-    actionRow.appendChild(
-      createActionButton("List", "≡", "list", "reskin-btn-list")
-    );
-
-    const courseList = document.createElement("div");
-    courseList.className = "uva-reskin-course-list";
-
-    courses.forEach((course) => {
-      courseList.appendChild(createCourseRow(course));
-    });
-
-    leftCol.appendChild(actionRow);
-    leftCol.appendChild(courseList);
-
-    // Right column calendar
-    const rightCol = document.createElement("div");
-    rightCol.className = "uva-reskin-right-column";
-
-    const calendarHeader = document.createElement("div");
-    calendarHeader.className = "uva-reskin-calendar-header";
-
-    const heading = document.createElement("h2");
-    heading.textContent = getCurrentMonthLabel();
-    calendarHeader.appendChild(heading);
-
-    const toggleContainer = document.createElement("div");
-    toggleContainer.className = "uva-reskin-toggle";
-    const toggleLabel = document.createElement("span");
-    toggleLabel.textContent = "";
-    toggleContainer.appendChild(toggleLabel);
-    calendarHeader.appendChild(toggleContainer);
-
-    const calendar = document.createElement("div");
-    calendar.className = "uva-reskin-calendar";
-
-    const dayHeaderRow = document.createElement("div");
-    dayHeaderRow.className = "uva-reskin-calendar-day-header-row";
-
-    ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"].forEach((d) => {
-      const dayEl = document.createElement("div");
-      dayEl.className = "uva-reskin-calendar-day-header";
-      dayEl.textContent = d;
-      dayHeaderRow.appendChild(dayEl);
-    });
-
-    const grid = document.createElement("div");
-    grid.className = "uva-reskin-calendar-grid";
-    state.calendarGridEl = grid;
-
-    buildCalendarDays(grid); // fills grid with date cells
-
-    calendar.appendChild(dayHeaderRow);
-    calendar.appendChild(grid);
-
-    rightCol.appendChild(calendarHeader);
-    rightCol.appendChild(calendar);
-
-    main.appendChild(leftCol);
-    main.appendChild(rightCol);
-
-    root.appendChild(nav);
-    root.appendChild(main);
-
-    const body = document.body;
-    body.appendChild(root);
+          <section class="uva-right-pane">
+            <div class="uva-calendar-header-row">
+              <h2 class="uva-calendar-title">May 2026</h2>
+            </div>
+            <div class="uva-calendar-grid">
+              <div class="uva-calendar-weekdays">
+                <div>Mo</div><div>Tu</div><div>We</div><div>Th</div><div>Fr</div><div>Sa</div><div>Su</div>
+              </div>
+              <div class="uva-calendar-days">
+                ${buildCalendarSkeleton()}
+              </div>
+            </div>
+            <div class="uva-calendar-events">
+              ${todoHTML}
+            </div>
+          </section>
+        </main>
+      </div>
+    `;
 
     return root;
   }
 
-  function createNavItem(label, key) {
-    const el = document.createElement("div");
-    el.className = "uva-reskin-nav-item uva-reskin-nav-item-" + key;
-    el.textContent = label;
-    return el;
-  }
-
-  function createActionButton(label, symbol, key, id) {
-    const btn = document.createElement("button");
-    btn.className = "uva-reskin-action-button uva-reskin-action-" + key;
-    if (id) btn.id = id;
-
-    const iconWrap = document.createElement("div");
-    iconWrap.className = "uva-reskin-action-icon";
-    iconWrap.textContent = symbol;
-
-    const text = document.createElement("div");
-    text.className = "uva-reskin-action-label";
-    text.textContent = label;
-
-    btn.appendChild(iconWrap);
-    btn.appendChild(text);
-    return btn;
-  }
-
-  function createCourseRow(course) {
-    const row = document.createElement("div");
-    row.className = "uva-reskin-course-row";
-
-    if (course.url) {
-      row.addEventListener("click", () => {
-        window.location.href = course.url;
-      });
-      row.style.cursor = "pointer";
+  function buildCalendarSkeleton() {
+    // Simple 5x7 skeleton like your mock; we are not mapping real dates yet.
+    const days = [];
+    for (let i = 1; i <= 35; i++) {
+      days.push(`<div class="uva-calendar-day">${i <= 31 ? i : ""}</div>`);
     }
-
-    const title = document.createElement("div");
-    title.className = "uva-reskin-course-title";
-    title.textContent = course.title;
-
-    const meta = document.createElement("div");
-    meta.className = "uva-reskin-course-meta";
-    meta.textContent = course.code || "";
-
-    const grade = document.createElement("div");
-    grade.className = "uva-reskin-course-grade";
-    grade.textContent = course.grade || "--";
-
-    row.appendChild(title);
-    row.appendChild(meta);
-    row.appendChild(grade);
-
-    return row;
+    return days.join("");
   }
 
-  // ------------------------------------------------------------
-  // Calendar rendering
-  // ------------------------------------------------------------
+  // -----------------------------
+  // INTERACTIONS
+  // -----------------------------
 
-  function getCurrentMonthLabel() {
-    const today = new Date();
-    const monthLabel = today.toLocaleString("default", { month: "long" });
-    const yearLabel = today.getFullYear();
-    state.month = today.getMonth();
-    state.year = today.getFullYear();
-    return `${monthLabel} ${yearLabel}`;
-  }
-
-  function buildCalendarDays(grid) {
-    grid.innerHTML = "";
-
-    const month = state.month;
-    const year = state.year;
-
-    const first = new Date(year, month, 1);
-    const firstDayIndex = (first.getDay() + 6) % 7; // convert Sun=0 to last
-
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-    // Leading empty cells
-    for (let i = 0; i < firstDayIndex; i++) {
-      const empty = document.createElement("div");
-      empty.className = "uva-reskin-calendar-cell uva-reskin-calendar-cell-empty";
-      grid.appendChild(empty);
-    }
-
-    // Actual days
-    for (let d = 1; d <= daysInMonth; d++) {
-      const cell = document.createElement("div");
-      cell.className = "uva-reskin-calendar-cell";
-      cell.dataset.day = String(d);
-
-      const label = document.createElement("div");
-      label.className = "uva-reskin-calendar-date-label";
-      label.textContent = String(d);
-      cell.appendChild(label);
-
-      const eventsContainer = document.createElement("div");
-      eventsContainer.className = "uva-reskin-calendar-events";
-      cell.appendChild(eventsContainer);
-
-      grid.appendChild(cell);
-    }
-  }
-
-  function renderCalendarEvents() {
-    if (!state.calendarGridEl || !state.events || !state.events.length) return;
-
-    // Clear old event pills
-    const allEventContainers = state.calendarGridEl.querySelectorAll(
-      ".uva-reskin-calendar-events"
-    );
-    allEventContainers.forEach((c) => {
-      c.innerHTML = "";
-    });
-
-    const month = state.month;
-    const year = state.year;
-
-    state.events.forEach((evt) => {
-      const d = evt.date;
-      if (
-        d.getMonth() !== month ||
-        d.getFullYear() !== year
-      ) {
-        return;
-      }
-
-      const dayNum = d.getDate();
-      const cell = state.calendarGridEl.querySelector(
-        `.uva-reskin-calendar-cell[data-day="${dayNum}"]`
+  function wireInteractions(root, courses) {
+    // Action buttons: messages + groups routing
+    root
+      .querySelectorAll(".uva-action-btn")
+      .forEach((btn) =>
+        btn.addEventListener("click", () => handleActionClick(btn))
       );
-      if (!cell) return;
 
-      const container = cell.querySelector(".uva-reskin-calendar-events");
-      if (!container) return;
+    // Course cards: navigate to course
+    root.querySelectorAll(".uva-course-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const idxStr = card.getAttribute("data-course-index");
+        const idx = idxStr ? parseInt(idxStr, 10) : NaN;
+        if (!Number.isNaN(idx) && courses[idx] && courses[idx].href) {
+          window.location.href = courses[idx].href;
+        }
+      });
+    });
 
-      const pill = document.createElement("div");
-      pill.className = "uva-reskin-calendar-event-pill";
-      pill.textContent = evt.title;
-
-      // Optional tooltip with course context
-      if (evt.course) {
-        pill.title = `${evt.course} – ${evt.title}`;
-      }
-
-      container.appendChild(pill);
+    // Todo events: open original link if we captured it
+    const todos = scrapeTodoItems(); // re-use scraped list for hrefs
+    root.querySelectorAll("[data-todo-index]").forEach((pill) => {
+      pill.addEventListener("click", () => {
+        const idxStr = pill.getAttribute("data-todo-index");
+        const idx = idxStr ? parseInt(idxStr, 10) : NaN;
+        if (!Number.isNaN(idx) && todos[idx] && todos[idx].href) {
+          window.location.href = todos[idx].href;
+        }
+      });
     });
   }
 
-  // ------------------------------------------------------------
-  // Navigation wiring
-  // ------------------------------------------------------------
+  function handleActionClick(btn) {
+    const action = btn.getAttribute("data-action");
+    if (!action) return;
 
-  function wireNavigationButtons(root) {
-    const messagesBtn = root.querySelector("#reskin-btn-messages");
-    const groupsBtn = root.querySelector("#reskin-btn-groups");
-
-    if (messagesBtn) {
-      messagesBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
+    switch (action) {
+      case "messages":
         window.location.href = "https://canvas.its.virginia.edu/conversations";
-      });
-    }
-
-    if (groupsBtn) {
-      groupsBtn.addEventListener("click", (e) => {
-        e.stopPropagation();
+        break;
+      case "groups":
         window.location.href = "https://canvas.its.virginia.edu/groups";
-      });
+        break;
+      case "files":
+        // You can point this at whatever makes sense later
+        window.location.href = "https://canvas.its.virginia.edu/files";
+        break;
+      case "list":
+        // Maybe a todo or list view later
+        window.location.href = "https://canvas.its.virginia.edu/calendar";
+        break;
+      default:
+        break;
     }
+  }
+
+  // -----------------------------
+  // UTIL
+  // -----------------------------
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 })();
