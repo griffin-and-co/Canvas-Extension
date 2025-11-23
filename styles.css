@@ -63,25 +63,101 @@ body { overflow: hidden !important; }
     align-items: flex-start;
 }
 
-/* LEFT COLUMN (Sidebar info) */
+/* adjust column proportions */
 .left-column {
-    flex: 0.8; 
+    flex: 0 0 42%;
     display: flex;
     flex-direction: column;
     gap: 35px;
 }
 
-/* RIGHT COLUMN (Main Content Area) */
 .right-column {
-    flex: 1.2;
-    max-width: 900px;
+    flex: 0 0 58%;
+    width: auto;
     background: white;
     padding: 40px;
     border-radius: 30px;
-    min-height: 700px;
+    max-height: 700px; /* limit vertical size */
     box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+    overflow: hidden; /* frame doesn't scroll, inner content does */
+}
+
+/* inner scroll area for both list + calendar */
+.upcoming-scroll {
+    max-height: 540px;
+    overflow-y: auto;
+    padding-right: 8px;
+}
+
+/* toggle UI */
+.upcoming-toggle {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+}
+
+.toggle-label {
+    opacity: 0.6;
+    font-weight: 500;
+}
+
+.toggle-active {
+    opacity: 1;
+    font-weight: 700;
+    color: var(--uva-navy);
+}
+
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-switch .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #ccc;
+    border-radius: 24px;
+    transition: 0.2s;
+}
+
+.toggle-switch .slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    top: 3px;
+    background-color: #fff;
+    border-radius: 50%;
+    transition: 0.2s;
+}
+
+.toggle-switch input:checked + .slider {
+    background-color: var(--uva-navy);
+}
+
+.toggle-switch input:checked + .slider:before {
+    transform: translateX(22px);
+}
+
+/* mini calendar header in the upcoming panel */
+.mini-calendar-header {
+    margin-bottom: 15px;
+}
+
+/* keep calendar cells scroll-friendly */
+.cal-cell {
+    min-height: 110px;
 }
 
 
@@ -171,105 +247,4 @@ body { overflow: hidden !important; }
 .btn-connect {
     background: var(--uva-navy); color: white; padding: 10px 20px;
     border-radius: 8px; text-decoration: none; font-weight: bold;
-}
-
-/* Upcoming panel internal scroll */
-.upcoming-body {
-    flex: 1;
-    max-height: 650px;          /* limit vertical size */
-    overflow-y: auto;           /* scroll inside the frame */
-    padding-right: 8px;         /* small gutter for scrollbar */
-}
-
-/* Toggle buttons */
-.view-toggle {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-}
-
-.view-toggle-btn {
-    border: 1px solid var(--border-color);
-    background: #f3f4f6;
-    padding: 6px 12px;
-    border-radius: 999px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.view-toggle-btn.active {
-    background: var(--uva-navy);
-    color: #fff;
-    border-color: var(--uva-navy);
-}
-
-.left-column-condensed {
-    flex: 0.9;
-}
-
-.right-column-wide {
-    flex: 1.6;
-    width: auto;
-}
-.upcoming-body {
-    max-height: 600px;      /* vertical limit */
-    overflow-y: auto;       /* scroll inside */
-}
-
-/* Also used when list is directly wrapped */
-.scrollable-panel {
-    max-height: 600px;
-    overflow-y: auto;
-}
-
-.upcoming-toggle-label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-    color: #555;
-}
-
-/* Basic switch */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 46px;
-    height: 24px;
-}
-
-.switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.slider {
-    position: absolute;
-    cursor: pointer;
-    inset: 0;
-    background-color: #ccc;
-    transition: .2s;
-    border-radius: 24px;
-}
-
-.slider:before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: .2s;
-    border-radius: 50%;
-}
-
-.switch input:checked + .slider {
-    background-color: var(--uva-navy);
-}
-
-.switch input:checked + .slider:before {
-    transform: translateX(22px);
 }

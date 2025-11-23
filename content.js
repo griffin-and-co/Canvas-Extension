@@ -107,7 +107,7 @@ const fallbackAssignments = [
 let courses = [...fallbackCourses];
 let assignments = [...fallbackAssignments];
 let currentView = "home"; // 'home', 'connect', 'calendar', 'todo', 'profile', 'settings'
-let currentUpcomingView = 'list'; // 'list' or 'calendar'
+let upcomingView = 'list'; // 'list' or 'calendar'
 let dataLoaded = false;
 
 // --- 3. CANVAS DATA LOADERS ---
@@ -255,77 +255,41 @@ function getNavHTML() {
 
 // -- HOME VIEW GENERATORS --
 function getHomeContent() {
-    const courseHTML = courses.map(c => `
-        <div class="course-pill" style="background-color: ${c.bg};" data-url="${c.url || '#'}">
+    const courseHTML = courses
+        .map(
+            (c) => `
+        <div class="course-pill" style="background-color: ${c.bg}; cursor:pointer;"
+         onclick="window.location.href='${c.href}'">
             <div>
                 <h3 class="course-title">${c.name}</h3>
-                <p class="course-time">${c.time}</p>
+                <p class="course-time">${c.time || ""}</p>
             </div>
-            <div class="course-grade">${c.grade}</div>
+            <div class="course-grade">${c.grade || "–"}</div>
         </div>
-    `).join('');
+    `
+        )
+        .join("");
 
-    // List view HTML
-    const listHTML = assignments.map(a => `
-        <div class="assignment-item" data-url="${a.url || '#'}">
+    const assignmentHTML = assignments
+        .map(
+            (a) => `
+        <div class="assignment-item" 
+         style="cursor:pointer;"
+         onclick="${a.url ? `window.location.href='${a.url}'` : ''}">
             <div class="assignment-top-row">
                 <span>${a.title}</span>
-                <span class="assignment-date">${a.date}</span>
+                <span class="assignment-date">${a.dateLabel || ""}</span>
             </div>
             <div class="assignment-course">${a.course}</div>
         </div>
-    `).join('');
-
-    // Calendar view HTML (for Upcoming pane)
-    let calDaysHTML = '';
-    for (let i = 1; i <= 31; i++) {
-        const dayStr = `May ${i},`; // keep your fake-March logic or replace with real dates later
-
-        const events = assignments.filter(a => a.date.includes(dayStr));
-        const eventHTML = events.map(e => `
-            <div class="cal-event" 
-                 style="background:${e.bg};" 
-                 data-url="${e.url || '#'}">
-                ${e.title}
-            </div>
-        `).join('');
-
-        calDaysHTML += `
-            <div class="cal-cell">
-                <strong>${i}</strong>
-                ${eventHTML}
-            </div>
-        `;
-    }
-
-    const upcomingBodyHTML = currentUpcomingView === 'calendar'
-        ? `
-            <div class="upcoming-calendar-wrapper">
-                <div class="calendar-grid">
-                    <div class="cal-day-header">Mon</div>
-                    <div class="cal-day-header">Tue</div>
-                    <div class="cal-day-header">Wed</div>
-                    <div class="cal-day-header">Thu</div>
-                    <div class="cal-day-header">Fri</div>
-                    <div class="cal-day-header">Sat</div>
-                    <div class="cal-day-header">Sun</div>
-                    ${calDaysHTML}
-                </div>
-            </div>
-        `
-        : `
-            <div class="assignments-list scrollable-panel">
-                ${listHTML}
-            </div>
-        `;
-
-    // checked attribute when calendar mode
-    const toggleChecked = currentUpcomingView === 'calendar' ? 'checked' : '';
+    `
+        )
+        .join("");
 
     return `
     <div class="dashboard-container">
-        <!-- LEFT: Courses (slightly shrunk) -->
-        <div class="left-column left-column-condensed">
+        <!-- LEFT: Courses -->
+        <div class="left-column">
             <div class="icon-row">
                 <div class="icon-card">💬</div>
                 <div class="icon-card">📄</div>
@@ -336,65 +300,37 @@ function getHomeContent() {
                 ${courseHTML}
             </div>
         </div>
-        <!-- RIGHT: Upcoming with toggle + wider frame -->
-        <div class="right-column right-column-wide">
+                <!-- RIGHT: Upcoming -->
+        <div class="right-column">
             <div class="upcoming-header">
                 <div class="upcoming-title">Upcoming</div>
-                <label class="upcoming-toggle-label">
-                    <span>List</span>
-                    <label class="switch">
-                        <input type="checkbox" class="upcoming-toggle" ${toggleChecked}>
+                <div class="upcoming-toggle">
+                    <span class="${upcomingView === 'list' ? 'toggle-label toggle-active' : 'toggle-label'}">
+                        List
+                    </span>
+                    <label class="toggle-switch">
+                        <input
+                            type="checkbox"
+                            id="upcomingToggle"
+                            ${upcomingView === 'calendar' ? 'checked' : ''}
+                        />
                         <span class="slider"></span>
                     </label>
-                    <span>Calendar</span>
-                </label>
+                    <span class="${upcomingView === 'calendar' ? 'toggle-label toggle-active' : 'toggle-label'}">
+                        Calendar
+                    </span>
+                </div>
             </div>
-            <div class="upcoming-body scrollable-panel">
-                ${upcomingBodyHTML}
-            </div>
+            ${
+                upcomingView === 'list'
+                    ? `<div class="upcoming-scroll assignments-list">
+                           ${assignmentHTML}
+                       </div>`
+                    : getUpcomingCalendarHTML()
+            }
         </div>
+
     </div>`;
-}
-
-
-function getCalendarGridHTML() {
-    // TODO: replace "May 2026" logic later with real dates if you want
-    let daysHTML = '';
-    for (let i = 1; i <= 31; i++) {
-        const events = assignments.filter(a => a.date.includes(`May ${i},`));
-
-        const eventHTML = events.map(e => `
-            <a
-                href="${e.url || '#'}"
-                class="cal-event"
-                style="background:${e.bg}"
-                target="_blank"
-                rel="noopener noreferrer"
-            >
-                ${e.title}
-            </a>
-        `).join('');
-
-        daysHTML += `
-            <div class="cal-cell">
-                <strong>${i}</strong>
-                ${eventHTML}
-            </div>
-        `;
-    }
-
-    return `
-        <div class="calendar-grid">
-            <div class="cal-day-header">Mon</div>
-            <div class="cal-day-header">Tue</div>
-            <div class="cal-day-header">Wed</div>
-            <div class="cal-day-header">Thu</div>
-            <div class="cal-day-header">Fri</div>
-            <div class="cal-day-header">Sat</div>
-            <div class="cal-day-header">Sun</div>
-            ${daysHTML}
-        </div>
-    `;
 }
 
 // -- CALENDAR VIEW GENERATOR --
@@ -437,13 +373,70 @@ function getCalendarContent() {
     <div class="dashboard-container">
         <div class="full-width-column">
             <div class="calendar-header">
-                <h2 class="upcoming-title">May 2026</h2>
+                <h2 class="upcoming-title">${monthName} ${year}</h2>
                 <div style="font-size: 20px;">Reference Mode</div>
             </div>
-            ${getCalendarGridHTML()}
+            <div class="calendar-grid">
+                <div class="cal-day-header">Mon</div>
+                <div class="cal-day-header">Tue</div>
+                <div class="cal-day-header">Wed</div>
+                <div class="cal-day-header">Thu</div>
+                <div class="cal-day-header">Fri</div>
+                <div class="cal-day-header">Sat</div>
+                <div class="cal-day-header">Sun</div>
+                ${daysHTML}
+            </div>
         </div>
     </div>`;
 }
+function getUpcomingCalendarHTML() {
+    // helper to pull a day-of-month out of the assignment date string
+    const getDayFromDate = (dateStr) => {
+        if (!dateStr) return null;
+        const m = dateStr.match(/\b(\d{1,2})\b/); // first 1-2 digit number
+        return m ? parseInt(m[1], 10) : null;
+    };
+
+    let daysHTML = '';
+    for (let i = 1; i <= 31; i++) {
+        const events = assignments.filter(a => getDayFromDate(a.date) === i);
+        const eventHTML = events.map(e => `
+            <div
+                class="cal-event upcoming-cal-event"
+                style="background:${e.bg};"
+                ${e.url ? `data-url="${e.url}"` : ''}
+            >
+                ${e.title}
+            </div>
+        `).join('');
+
+        daysHTML += `
+            <div class="cal-cell">
+                <strong>${i}</strong>
+                ${eventHTML}
+            </div>
+        `;
+    }
+
+    return `
+        <div class="upcoming-scroll">
+            <div class="calendar-header mini-calendar-header">
+                <h2 class="upcoming-title">Calendar</h2>
+            </div>
+            <div class="calendar-grid">
+                <div class="cal-day-header">Mon</div>
+                <div class="cal-day-header">Tue</div>
+                <div class="cal-day-header">Wed</div>
+                <div class="cal-day-header">Thu</div>
+                <div class="cal-day-header">Fri</div>
+                <div class="cal-day-header">Sat</div>
+                <div class="cal-day-header">Sun</div>
+                ${daysHTML}
+            </div>
+        </div>
+    `;
+}
+
 
 // -- CONNECT VIEW GENERATOR --
 function getConnectContent() {
@@ -501,52 +494,33 @@ function render() {
 }
 
 function attachListeners() {
-    // Top nav
-    const navItems = document.querySelectorAll('.nav-item');
-    navItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const newView = item.dataset.view;
-            if (!newView) return;
-            currentView = newView;
+    const navItems = document.querySelectorAll(".nav-item");
+    navItems.forEach((item) => {
+        item.addEventListener("click", () => {
+            currentView = item.dataset.view;
             render();
         });
     });
-
-    // Upcoming toggle (only exists in Home view)
-    const upcomingToggle = document.querySelector('.upcoming-toggle');
+        // Upcoming view toggle
+    const upcomingToggle = document.getElementById('upcomingToggle');
     if (upcomingToggle) {
-        upcomingToggle.addEventListener('change', (e) => {
-            currentUpcomingView = e.target.checked ? 'calendar' : 'list';
+        upcomingToggle.addEventListener('change', () => {
+            upcomingView = upcomingToggle.checked ? 'calendar' : 'list';
             render();
         });
     }
 
-    // Make assignment items clickable (list view)
-    document.querySelectorAll('.assignment-item[data-url]').forEach(item => {
-        item.addEventListener('click', () => {
-            const url = item.getAttribute('data-url');
-            if (url) window.location.href = url;
+    // Make calendar events clickable (same behavior as list assignments)
+    document.querySelectorAll('.upcoming-cal-event[data-url]').forEach(el => {
+        const url = el.getAttribute('data-url');
+        if (!url) return;
+        el.style.cursor = 'pointer';
+        el.addEventListener('click', () => {
+            window.location.href = url;
         });
     });
 
-    // Make calendar events clickable
-    document.querySelectorAll('.cal-event[data-url]').forEach(ev => {
-        ev.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const url = ev.getAttribute('data-url');
-            if (url) window.location.href = url;
-        });
-    });
-
-    // Make course pills clickable
-    document.querySelectorAll('.course-pill[data-url]').forEach(pill => {
-        pill.addEventListener('click', () => {
-            const url = pill.getAttribute('data-url');
-            if (url) window.location.href = url;
-        });
-    });
 }
-
 
 // --- 6. INIT ---
 
