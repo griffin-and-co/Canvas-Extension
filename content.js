@@ -6,11 +6,11 @@
   if (!location.host.includes(CANVAS_HOST)) return;
 
   // Only run on main dashboard, but allow tweak if Canvas changes
-  const body = document.body;
-  if (!body || !body.classList.contains("dashboard-is-planner")) {
+  //const body = document.body;
+  //if (!body || !body.classList.contains("dashboard-is-planner")) {
     // If you want this to run everywhere, comment this out
     // return;
-  }
+  //}
 
   // Basic state
   const state = {
