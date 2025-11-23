@@ -356,10 +356,18 @@ function getCalendarContent() {
 
         const eventHTML = events
             .map(
-                (e) =>
-                    `<div class="cal-event" style="background:${e.bg}">${e.title}</div>`
+                (e) => `
+                    <div
+                        class="cal-event"
+                        style="background:${e.bg};"
+                        ${e.url ? `data-url="${e.url}"` : ''}
+                    >
+                        ${e.title}
+                    </div>
+                `
             )
             .join("");
+
 
         daysHTML += `
             <div class="cal-cell">
@@ -389,17 +397,27 @@ function getCalendarContent() {
         </div>
     </div>`;
 }
+
 function getUpcomingCalendarHTML() {
-    // helper to pull a day-of-month out of the assignment date string
-    const getDayFromDate = (dateStr) => {
-        if (!dateStr) return null;
-        const m = dateStr.match(/\b(\d{1,2})\b/); // first 1-2 digit number
-        return m ? parseInt(m[1], 10) : null;
-    };
+    const now = new Date();
+    const year = now.getFullYear();
+    const monthIndex = now.getMonth(); // 0-based
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+    const monthName = now.toLocaleDateString("en-US", { month: "long" });
 
     let daysHTML = '';
-    for (let i = 1; i <= 31; i++) {
-        const events = assignments.filter(a => getDayFromDate(a.date) === i);
+    for (let i = 1; i <= daysInMonth; i++) {
+        const events = assignments.filter(a => {
+            if (!a.rawDate) return false;
+            const d = new Date(a.rawDate);
+            if (Number.isNaN(d)) return false;
+            return (
+                d.getFullYear() === year &&
+                d.getMonth() === monthIndex &&
+                d.getDate() === i
+            );
+        });
+
         const eventHTML = events.map(e => `
             <div
                 class="cal-event upcoming-cal-event"
@@ -421,7 +439,7 @@ function getUpcomingCalendarHTML() {
     return `
         <div class="upcoming-scroll">
             <div class="calendar-header mini-calendar-header">
-                <h2 class="upcoming-title">Calendar</h2>
+                <h2 class="upcoming-title">${monthName}</h2>
             </div>
             <div class="calendar-grid">
                 <div class="cal-day-header">Mon</div>
@@ -436,6 +454,7 @@ function getUpcomingCalendarHTML() {
         </div>
     `;
 }
+
 
 
 // -- CONNECT VIEW GENERATOR --
@@ -510,8 +529,8 @@ function attachListeners() {
         });
     }
 
-    // Make calendar events clickable (same behavior as list assignments)
-    document.querySelectorAll('.upcoming-cal-event[data-url]').forEach(el => {
+    // Make calendar events clickable (mini + full calendar)
+    document.querySelectorAll('.upcoming-cal-event[data-url], .cal-event[data-url]').forEach(el => {
         const url = el.getAttribute('data-url');
         if (!url) return;
         el.style.cursor = 'pointer';
@@ -519,6 +538,7 @@ function attachListeners() {
             window.location.href = url;
         });
     });
+
 
 }
 
