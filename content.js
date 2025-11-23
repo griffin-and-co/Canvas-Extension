@@ -107,7 +107,7 @@ const fallbackAssignments = [
 let courses = [...fallbackCourses];
 let assignments = [...fallbackAssignments];
 let currentView = "home"; // 'home', 'connect', 'calendar', 'todo', 'profile', 'settings'
-let homeUpcomingMode = 'list'; // 'list' or 'calendar'
+let homeUpcomingMode = 'calendar'; // 'list' or 'calendar'
 let dataLoaded = false;
 
 // --- 3. CANVAS DATA LOADERS ---
