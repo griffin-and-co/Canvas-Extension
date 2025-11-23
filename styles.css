@@ -203,3 +203,73 @@ body { overflow: hidden !important; }
     color: #fff;
     border-color: var(--uva-navy);
 }
+
+.left-column-condensed {
+    flex: 0.9;
+}
+
+.right-column-wide {
+    flex: 1.6;
+    width: auto;
+}
+.upcoming-body {
+    max-height: 600px;      /* vertical limit */
+    overflow-y: auto;       /* scroll inside */
+}
+
+/* Also used when list is directly wrapped */
+.scrollable-panel {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.upcoming-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    color: #555;
+}
+
+/* Basic switch */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 24px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #ccc;
+    transition: .2s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .2s;
+    border-radius: 50%;
+}
+
+.switch input:checked + .slider {
+    background-color: var(--uva-navy);
+}
+
+.switch input:checked + .slider:before {
+    transform: translateX(22px);
+}

@@ -107,7 +107,7 @@ const fallbackAssignments = [
 let courses = [...fallbackCourses];
 let assignments = [...fallbackAssignments];
 let currentView = "home"; // 'home', 'connect', 'calendar', 'todo', 'profile', 'settings'
-let homeUpcomingMode = 'list'; // 'list' or 'calendar'
+let currentUpcomingView = 'list'; // 'list' or 'calendar'
 let dataLoaded = false;
 
 // --- 3. CANVAS DATA LOADERS ---
@@ -255,45 +255,77 @@ function getNavHTML() {
 
 // -- HOME VIEW GENERATORS --
 function getHomeContent() {
-    const courseHTML = courses
-        .map(
-            (c) => `
-        <div class="course-pill" style="background-color: ${c.bg}; cursor:pointer;"
-         onclick="window.location.href='${c.href}'">
+    const courseHTML = courses.map(c => `
+        <div class="course-pill" style="background-color: ${c.bg};" data-url="${c.url || '#'}">
             <div>
                 <h3 class="course-title">${c.name}</h3>
-                <p class="course-time">${c.time || ""}</p>
+                <p class="course-time">${c.time}</p>
             </div>
-            <div class="course-grade">${c.grade || "–"}</div>
+            <div class="course-grade">${c.grade}</div>
         </div>
-    `
-        )
-        .join("");
+    `).join('');
 
-    const assignmentHTML = assignments
-        .map(
-            (a) => `
-        <div class="assignment-item" 
-         style="cursor:pointer;"
-         onclick="${a.url ? `window.location.href='${a.url}'` : ''}">
+    // List view HTML
+    const listHTML = assignments.map(a => `
+        <div class="assignment-item" data-url="${a.url || '#'}">
             <div class="assignment-top-row">
                 <span>${a.title}</span>
-                <span class="assignment-date">${a.dateLabel || ""}</span>
+                <span class="assignment-date">${a.date}</span>
             </div>
             <div class="assignment-course">${a.course}</div>
         </div>
-    `
-        )
-        .join("");
+    `).join('');
 
-    const upcomingBodyHTML = homeUpcomingMode === 'list'
-        ? `<div class="assignments-list">${assignmentHTML}</div>`
-        : getCalendarGridHTML();
+    // Calendar view HTML (for Upcoming pane)
+    let calDaysHTML = '';
+    for (let i = 1; i <= 31; i++) {
+        const dayStr = `May ${i},`; // keep your fake-March logic or replace with real dates later
+
+        const events = assignments.filter(a => a.date.includes(dayStr));
+        const eventHTML = events.map(e => `
+            <div class="cal-event" 
+                 style="background:${e.bg};" 
+                 data-url="${e.url || '#'}">
+                ${e.title}
+            </div>
+        `).join('');
+
+        calDaysHTML += `
+            <div class="cal-cell">
+                <strong>${i}</strong>
+                ${eventHTML}
+            </div>
+        `;
+    }
+
+    const upcomingBodyHTML = currentUpcomingView === 'calendar'
+        ? `
+            <div class="upcoming-calendar-wrapper">
+                <div class="calendar-grid">
+                    <div class="cal-day-header">Mon</div>
+                    <div class="cal-day-header">Tue</div>
+                    <div class="cal-day-header">Wed</div>
+                    <div class="cal-day-header">Thu</div>
+                    <div class="cal-day-header">Fri</div>
+                    <div class="cal-day-header">Sat</div>
+                    <div class="cal-day-header">Sun</div>
+                    ${calDaysHTML}
+                </div>
+            </div>
+        `
+        : `
+            <div class="assignments-list scrollable-panel">
+                ${listHTML}
+            </div>
+        `;
+
+    // checked attribute when calendar mode
+    const toggleChecked = currentUpcomingView === 'calendar' ? 'checked' : '';
 
     return `
     <div class="dashboard-container">
-        <!-- LEFT: Courses -->
-        <div class="left-column">
+        <!-- LEFT: Courses (slightly shrunk) -->
+        <div class="left-column left-column-condensed">
             <div class="icon-row">
                 <div class="icon-card">💬</div>
                 <div class="icon-card">📄</div>
@@ -304,32 +336,26 @@ function getHomeContent() {
                 ${courseHTML}
             </div>
         </div>
-        <!-- RIGHT: Upcoming -->
-        <div class="right-column">
+        <!-- RIGHT: Upcoming with toggle + wider frame -->
+        <div class="right-column right-column-wide">
             <div class="upcoming-header">
                 <div class="upcoming-title">Upcoming</div>
-                <div class="view-toggle">
-                    <button
-                        class="view-toggle-btn ${homeUpcomingMode === 'list' ? 'active' : ''}"
-                        data-mode="list"
-                    >
-                        List view
-                    </button>
-                    <button
-                        class="view-toggle-btn ${homeUpcomingMode === 'calendar' ? 'active' : ''}"
-                        data-mode="calendar"
-                    >
-                        Calendar view
-                    </button>
-                </div>
+                <label class="upcoming-toggle-label">
+                    <span>List</span>
+                    <label class="switch">
+                        <input type="checkbox" class="upcoming-toggle" ${toggleChecked}>
+                        <span class="slider"></span>
+                    </label>
+                    <span>Calendar</span>
+                </label>
             </div>
-            <div class="upcoming-body">
+            <div class="upcoming-body scrollable-panel">
                 ${upcomingBodyHTML}
             </div>
         </div>
-
     </div>`;
 }
+
 
 function getCalendarGridHTML() {
     // TODO: replace "May 2026" logic later with real dates if you want
@@ -455,44 +481,68 @@ function getConnectContent() {
 // --- 5. RENDER LOGIC ---
 
 function render() {
-    const root = document.getElementById("my-extension-root");
+    const root = document.getElementById('my-extension-root');
     if (!root) return;
 
-    let contentHTML = "";
-    if (currentView === "home") contentHTML = getHomeContent();
-    else if (currentView === "calendar") contentHTML = getCalendarContent();
-    else if (currentView === "connect") contentHTML = getConnectContent();
-    else
-        contentHTML = `
-        <div class="dashboard-container">
-            <div class="full-width-column">
-                <h1>${currentView.toUpperCase()} View Coming Soon</h1>
-            </div>
-        </div>`;
+    let contentHTML = '';
+    if (currentView === 'home') contentHTML = getHomeContent();
+    else if (currentView === 'calendar') contentHTML = getCalendarContent();
+    else if (currentView === 'connect') contentHTML = getConnectContent();
+    else contentHTML = `<div class="dashboard-container"><div class="full-width-column"><h1>${currentView.toUpperCase()} View Coming Soon</h1></div></div>`;
 
     root.innerHTML = getNavHTML() + contentHTML;
+
     attachListeners();
 }
 
+
 function attachListeners() {
-    const navItems = document.querySelectorAll(".nav-item");
-    navItems.forEach((item) => {
-        item.addEventListener("click", () => {
-            currentView = item.dataset.view;
+    // Top nav
+    const navItems = document.querySelectorAll('.nav-item');
+    navItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const newView = item.dataset.view;
+            if (!newView) return;
+            currentView = newView;
             render();
         });
     });
-    const viewToggleButtons = document.querySelectorAll('.view-toggle-btn');
-    viewToggleButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const mode = btn.dataset.mode;
-            if (mode && mode !== homeUpcomingMode) {
-                homeUpcomingMode = mode;
-                render();
-            }
+
+    // Upcoming toggle (only exists in Home view)
+    const upcomingToggle = document.querySelector('.upcoming-toggle');
+    if (upcomingToggle) {
+        upcomingToggle.addEventListener('change', (e) => {
+            currentUpcomingView = e.target.checked ? 'calendar' : 'list';
+            render();
+        });
+    }
+
+    // Make assignment items clickable (list view)
+    document.querySelectorAll('.assignment-item[data-url]').forEach(item => {
+        item.addEventListener('click', () => {
+            const url = item.getAttribute('data-url');
+            if (url) window.location.href = url;
+        });
+    });
+
+    // Make calendar events clickable
+    document.querySelectorAll('.cal-event[data-url]').forEach(ev => {
+        ev.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const url = ev.getAttribute('data-url');
+            if (url) window.location.href = url;
+        });
+    });
+
+    // Make course pills clickable
+    document.querySelectorAll('.course-pill[data-url]').forEach(pill => {
+        pill.addEventListener('click', () => {
+            const url = pill.getAttribute('data-url');
+            if (url) window.location.href = url;
         });
     });
 }
+
 
 // --- 6. INIT ---
 
