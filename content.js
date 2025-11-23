@@ -163,7 +163,8 @@ async function fetchAssignmentsFromPlanner() {
                 rawDate: dueRaw,
                 dateLabel: formatDateLabel(dueRaw),
                 course: courseName,
-                bg
+                bg,
+                url: item.html_url || item.plannable.html_url || null 
             };
         });
 
@@ -213,7 +214,8 @@ async function loadCanvasData() {
             name: c.name,
             time: c.time,
             grade: grades[idx],
-            bg: c.bg
+            bg: c.bg,
+            href: c.href   
         }));
 
         // 3) UPCOMING ASSIGNMENTS from planner
@@ -255,7 +257,8 @@ function getHomeContent() {
     const courseHTML = courses
         .map(
             (c) => `
-        <div class="course-pill" style="background-color: ${c.bg};">
+        <div class="course-pill" style="background-color: ${c.bg}; cursor:pointer;"
+         onclick="window.location.href='${c.href}'">
             <div>
                 <h3 class="course-title">${c.name}</h3>
                 <p class="course-time">${c.time || ""}</p>
@@ -269,7 +272,9 @@ function getHomeContent() {
     const assignmentHTML = assignments
         .map(
             (a) => `
-        <div class="assignment-item">
+        <div class="assignment-item" 
+         style="cursor:pointer;"
+         onclick="${a.url ? `window.location.href='${a.url}'` : ''}">
             <div class="assignment-top-row">
                 <span>${a.title}</span>
                 <span class="assignment-date">${a.dateLabel || ""}</span>
