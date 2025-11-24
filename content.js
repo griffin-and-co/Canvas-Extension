@@ -470,9 +470,9 @@ function getCalendarContent() {
     }
 
     return `
-    <div class="dashboard-container">
+    <div class="dashboard-container calendar-page">
         <!-- LEFT: Upcoming list card (same look as home) -->
-        <div class="right-column">
+        <div class="calendar-left">
             <div class="upcoming-header">
                 <div class="upcoming-title">Upcoming</div>
             </div>
@@ -482,7 +482,7 @@ function getCalendarContent() {
         </div>
 
         <!-- RIGHT: Month calendar -->
-        <div class="full-width-column">
+        <div class="calendar-right">
             <div class="calendar-header">
                 <div class="calendar-header-left">
                     <h2 class="upcoming-title">${monthName} ${year}</h2>
@@ -740,15 +740,7 @@ function attachListeners() {
         });
     });
 
-    // make full calendar events clickable
-    document.querySelectorAll(".cal-event[data-url]").forEach((el) => {
-        const url = el.getAttribute("data-url");
-        if (!url) return;
-        el.style.cursor = "pointer";
-        el.addEventListener("click", () => {
-            window.location.href = url;
-        });
-    });
+    
 
 
         // --- TODO VIEW BEHAVIOR ---

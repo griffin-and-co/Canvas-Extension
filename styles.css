@@ -346,16 +346,22 @@ body.extension-overlay-active {
     opacity: 0.7;
 }
 
-/* --- CALENDAR PAGE LAYOUT OVERRIDES --- */
-.calendar-page .calendar-right {
-    max-height: none;      /* let the calendar use full height */
-    overflow: visible;     /* no clipping inside the calendar panel */
+/* --- CALENDAR PAGE LAYOUT --- */
+.calendar-left,
+.calendar-right {
+    background: white;
+    padding: 40px;
+    border-radius: 30px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
 }
 
-.calendar-page .left-column {
-    flex: 0 0 38%;
+/* proportions on the calendar nav page:
+   - left: upcoming list (narrower)
+   - right: calendar (wider) */
+.calendar-page .calendar-left {
+    flex: 0 0 35%;
 }
 
 .calendar-page .calendar-right {
-    flex: 0 0 62%;
+    flex: 0 0 65%;
 }
