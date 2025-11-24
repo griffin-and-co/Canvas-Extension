@@ -413,9 +413,36 @@ function getCalendarContent() {
     const monthName = target.toLocaleDateString("en-US", { month: "long" });
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
+    // LEFT COLUMN: upcoming assignments list
+    const assignmentHTML = assignments
+        .map(
+            (a) => `
+        <div class="assignment-item"
+             style="cursor:pointer;"
+             onclick="${a.url ? `window.location.href='${a.url}'` : ''}">
+            <div class="assignment-top-row">
+                <span>${a.title}</span>
+                <span class="assignment-date">${a.dateLabel || ""}</span>
+            </div>
+            <div class="assignment-course">${a.course}</div>
+        </div>
+    `
+        )
+        .join("");
+
+    // RIGHT COLUMN: calendar grid
     let daysHTML = "";
     for (let i = 1; i <= daysInMonth; i++) {
-        const events = getCalendarItemsForDay(year, monthIndex, i);
+        const events = assignments.filter((a) => {
+            if (!a.rawDate) return false;
+            const d = new Date(a.rawDate);
+            if (Number.isNaN(d)) return false;
+            return (
+                d.getFullYear() === year &&
+                d.getMonth() === monthIndex &&
+                d.getDate() === i
+            );
+        });
 
         const eventHTML = events
             .map(
@@ -438,10 +465,20 @@ function getCalendarContent() {
         `;
     }
 
-
     return `
-    <div class="dashboard-container">
-        <div class="full-width-column">
+    <div class="dashboard-container calendar-page">
+        <!-- LEFT: Upcoming assignments -->
+        <div class="left-column">
+            <div class="upcoming-header">
+                <div class="upcoming-title">Upcoming</div>
+            </div>
+            <div class="upcoming-scroll assignments-list">
+                ${assignmentHTML}
+            </div>
+        </div>
+
+        <!-- RIGHT: Calendar -->
+        <div class="right-column calendar-right">
             <div class="calendar-header">
                 <h2 class="upcoming-title">${monthName} ${year}</h2>
                 <div class="calendar-nav-buttons">
@@ -462,6 +499,7 @@ function getCalendarContent() {
         </div>
     </div>`;
 }
+
 
 
 function getUpcomingCalendarHTML() {
