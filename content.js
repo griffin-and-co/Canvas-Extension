@@ -316,7 +316,6 @@ function getHomeContent() {
                 <div class="icon-card" data-icon="inbox">💬</div>
                 <div class="icon-card" data-icon="files">📄</div>
                 <div class="icon-card" data-icon="groups">👥</div>
-                <div class="icon-card" data-icon="menu">☰</div>
             </div>
             <div class="course-list">
                 ${courseHTML}
