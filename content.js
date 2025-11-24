@@ -151,22 +151,37 @@ async function fetchAssignmentsFromPlanner() {
                 item.context_name ||
                 (item.course && item.course.name) ||
                 "Canvas course";
+
             const dueRaw =
                 item.plannable.due_at ||
                 item.plannable_date ||
                 item.plannable.created_at ||
                 null;
 
-            const bg = getColorForCourse(courseName);
+            // get a course id if possible
+            const courseId =
+                item.course_id ||
+                (item.plannable && item.plannable.course_id) ||
+                null;
+
+            // canonical color key matching what we used for dashboard cards
+            const colorKey =
+                (item.context_code && item.context_code.startsWith("course_") && item.context_code) ||
+                (courseId != null ? `course_${courseId}` : courseName);
+
+            const bg = getColorForCourse(colorKey);
+
             return {
                 title: item.plannable.title || "Assignment",
                 rawDate: dueRaw,
                 dateLabel: formatDateLabel(dueRaw),
                 course: courseName,
                 bg,
-                url: item.html_url || item.plannable.html_url || null 
+                url: item.html_url || item.plannable.html_url || null,
+                colorKey
             };
         });
+
 
         if (result.length === 0) return fallbackAssignments;
         return result;
@@ -192,9 +207,13 @@ async function loadCanvasData() {
                 c.courseCode ||
                 "Untitled course";
             const code = c.courseCode || "";
-            const key = name || c.id;
 
-            const bg = getColorForCourse(key);
+            // canonical color key for this course
+            const colorKey =
+                (c.assetString && typeof c.assetString === "string" && c.assetString) ||
+                (typeof c.id !== "undefined" ? `course_${c.id}` : name);
+
+            const bg = getColorForCourse(colorKey);
 
             return {
                 id: c.id,
@@ -202,9 +221,10 @@ async function loadCanvasData() {
                 time: code || c.term || "",
                 href: c.href,
                 bg,
-                colorKey: key
+                colorKey
             };
         });
+
 
         // 2) GRADES for each course (in parallel)
         const gradePromises = apiCourses.map((c) => fetchCourseGrades(c.id));
