@@ -413,11 +413,11 @@ function getCalendarContent() {
     const monthName = target.toLocaleDateString("en-US", { month: "long" });
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
-    // LEFT COLUMN: upcoming assignments list
+    // Upcoming list (same structure as home)
     const assignmentHTML = assignments
         .map(
             (a) => `
-        <div class="assignment-item"
+        <div class="assignment-item" 
              style="cursor:pointer;"
              onclick="${a.url ? `window.location.href='${a.url}'` : ''}">
             <div class="assignment-top-row">
@@ -430,7 +430,7 @@ function getCalendarContent() {
         )
         .join("");
 
-    // RIGHT COLUMN: calendar grid
+    // Calendar days
     let daysHTML = "";
     for (let i = 1; i <= daysInMonth; i++) {
         const events = assignments.filter((a) => {
@@ -466,9 +466,9 @@ function getCalendarContent() {
     }
 
     return `
-    <div class="dashboard-container calendar-page">
-        <!-- LEFT: Upcoming assignments -->
-        <div class="left-column">
+    <div class="dashboard-container">
+        <!-- LEFT: Upcoming list card (same look as home) -->
+        <div class="right-column">
             <div class="upcoming-header">
                 <div class="upcoming-title">Upcoming</div>
             </div>
@@ -477,13 +477,15 @@ function getCalendarContent() {
             </div>
         </div>
 
-        <!-- RIGHT: Calendar -->
-        <div class="right-column calendar-right">
+        <!-- RIGHT: Month calendar -->
+        <div class="full-width-column">
             <div class="calendar-header">
-                <h2 class="upcoming-title">${monthName} ${year}</h2>
-                <div class="calendar-nav-buttons">
-                    <button class="cal-nav-btn" data-cal-dir="prev">&lt;</button>
-                    <button class="cal-nav-btn" data-cal-dir="next">&gt;</button>
+                <div class="calendar-header-left">
+                    <h2 class="upcoming-title">${monthName} ${year}</h2>
+                    <div class="calendar-nav-buttons">
+                        <button class="cal-nav-btn" data-cal-dir="prev">&lt;</button>
+                        <button class="cal-nav-btn" data-cal-dir="next">&gt;</button>
+                    </div>
                 </div>
             </div>
             <div class="calendar-grid">
@@ -499,6 +501,7 @@ function getCalendarContent() {
         </div>
     </div>`;
 }
+
 
 
 
