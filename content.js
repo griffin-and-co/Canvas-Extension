@@ -564,7 +564,9 @@ function attachListeners() {
     const navItems = document.querySelectorAll(".nav-item");
     navItems.forEach((item) => {
         item.addEventListener("click", () => {
-            currentView = item.dataset.view;
+            const view = item.dataset.view;
+
+            // Hard redirects for profile / settings
             if (view === "profile") {
                 window.location.href = "https://canvas.its.virginia.edu/profile/";
                 return;
@@ -574,6 +576,7 @@ function attachListeners() {
                 return;
             }
 
+            // Normal in-extension routing for everything else
             currentView = view;
             render();
         });
