@@ -618,11 +618,31 @@ function getTodoContent() {
 // -- CONNECT VIEW GENERATOR --
 function getConnectContent() {
     const apps = [
-        { name: "Gradescope", icon: "📄" },
-        { name: "Blackboard", icon: "🎓" },
-        { name: "WebWork", icon: "🔢" },
-        { name: "Google Classroom", icon: "🏫" },
-        { name: "McGraw Hill", icon: "📚" }
+        {
+            name: "Gradescope",
+            icon: "📄",
+            url: "https://www.gradescope.com/"
+        },
+        {
+            name: "Blackboard",
+            icon: "🎓",
+            url: "https://www.blackboard.com/"
+        },
+        {
+            name: "WebWork",
+            icon: "🔢",
+            url: "https://webwork.its.virginia.edu/" // placeholder, adjust to UVA instance if needed
+        },
+        {
+            name: "Google Classroom",
+            icon: "🏫",
+            url: "https://classroom.google.com/"
+        },
+        {
+            name: "McGraw Hill",
+            icon: "📚",
+            url: "https://connect.mheducation.com/" // common McGraw-Hill Connect URL
+        }
     ];
 
     const appsHTML = apps
@@ -633,7 +653,14 @@ function getConnectContent() {
                 <span style="font-size:30px;">${app.icon}</span>
                 <span style="font-size:20px; font-weight:bold;">${app.name}</span>
             </div>
-            <a href="#" class="btn-connect">Visit Site</a>
+            <a
+                href="${app.url}"
+                class="btn-connect"
+                target="_blank"
+                rel="noopener noreferrer"
+            >
+                Visit Site
+            </a>
         </div>
     `
         )
@@ -647,6 +674,7 @@ function getConnectContent() {
         </div>
     </div>`;
 }
+
 
 // --- 5. RENDER LOGIC ---
 
