@@ -472,7 +472,7 @@ function getCalendarContent() {
     return `
     <div class="dashboard-container">
         <!-- LEFT: Upcoming list card (same look as home) -->
-        <div class="calendar-left">
+        <div class="right-column">
             <div class="upcoming-header">
                 <div class="upcoming-title">Upcoming</div>
             </div>
@@ -482,7 +482,7 @@ function getCalendarContent() {
         </div>
 
         <!-- RIGHT: Month calendar -->
-        <div class="calendar-right">
+        <div class="full-width-column">
             <div class="calendar-header">
                 <div class="calendar-header-left">
                     <h2 class="upcoming-title">${monthName} ${year}</h2>

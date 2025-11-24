@@ -352,7 +352,7 @@ body.extension-overlay-active {
     overflow: visible;     /* no clipping inside the calendar panel */
 }
 
-.calendar-page .calendar-left {
+.calendar-page .left-column {
     flex: 0 0 38%;
 }
 
