@@ -190,7 +190,7 @@ body.extension-overlay-active {
 
 /* --- 6. COMPONENT: COURSE PILLS --- */
 .course-pill {
-    padding: 35px 45px;
+    padding: 35px 35px;
     border-radius: 50px;
     display: flex; justify-content: space-between; align-items: center;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
@@ -200,7 +200,7 @@ body.extension-overlay-active {
     cursor: pointer;
 }
 .course-pill:hover { transform: scale(1.02); }
-.course-title { font-size: 26px; font-weight: 800; margin: 0; color: #222; letter-spacing: -0.5px; }
+.course-title { font-size: 22px; font-weight: 800; margin: 0; color: #222; letter-spacing: -0.5px; }
 .course-time { font-size: 16px; opacity: 0.7; margin-top: 8px; font-weight: 500; }
 .course-grade { font-size: 36px; font-weight: 800; color: #1D1B20; }
 
@@ -238,6 +238,31 @@ body.extension-overlay-active {
     font-weight: 600;
     color: #333;
 }
+
+.calendar-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.cal-nav-btn {
+    border: 1px solid var(--border-color);
+    background: #fff;
+    border-radius: 999px;
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cal-nav-btn:hover {
+    border-color: var(--uva-navy);
+}
+
 
 /* --- 9. COMPONENT: CONNECT CLASSES --- */
 .connect-row {

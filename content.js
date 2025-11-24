@@ -51,11 +51,7 @@ function formatDateLabel(raw) {
 // --- 1. FALLBACK STATIC DATA (used if API fails) ---
 
 const fallbackCourses = [
-    { name: "Introduction to Computer Science", time: "M/W/F 9:30-10:45", grade: "91%", bg: "#B1C5FF" },
-    { name: "New Product Development",          time: "Th 3:30-6:00",     grade: "88%", bg: "#B1FFB5" },
-    { name: "Materials Science",                time: "M/W/F 12:30-1:45", grade: "75%", bg: "#FFB1B2" },
-    { name: "Fundamentals of Real Estate Analysis", time: "T/Th 9:30-10:45", grade: "94%", bg: "#FFD7B1" },
-    { name: "Introduction to Macroeconomics",   time: "M/W/F 11:00-11:50", grade: "92%", bg: "#D2B1FF" }
+    { name: "Classes loading...", time: "Course code loading...", grade: "-", bg: "#969aa4ff" }
 ];
 
 // seed color map with fallback colors
@@ -66,40 +62,13 @@ fallbackCourses.forEach(c => {
 // fallback assignments now have rawDate + dateLabel
 const fallbackAssignments = [
     {
-        title: "Midterm Exam",
+        title: "Assignments loading...",
         rawDate: "2026-05-09T09:00:00",
         dateLabel: "Tue, May 9, 2026",
-        course: "Real Estate Analysis",
-        bg: "#FFD7B1"
+        course: "Course loading...",
+        bg: "#969aa4ff"
     },
-    {
-        title: "Project Presentation",
-        rawDate: "2026-05-12T09:00:00",
-        dateLabel: "Fri, May 12, 2026",
-        course: "Computer Science",
-        bg: "#B1C5FF"
-    },
-    {
-        title: "Lab Report Due",
-        rawDate: "2026-05-16T09:00:00",
-        dateLabel: "Tue, May 16, 2026",
-        course: "Real Estate Analysis",
-        bg: "#FFD7B1"
-    },
-    {
-        title: "Group Discussion",
-        rawDate: "2026-05-19T09:00:00",
-        dateLabel: "Fri, May 19, 2026",
-        course: "Macroeconomics",
-        bg: "#D2B1FF"
-    },
-    {
-        title: "Final Paper Due",
-        rawDate: "2026-05-26T09:00:00",
-        dateLabel: "Fri, May 26, 2026",
-        course: "Materials Science",
-        bg: "#FFB1B2"
-    }
+    
 ];
 
 // --- 2. LIVE DATA STATE ---
@@ -108,6 +77,7 @@ let courses = [...fallbackCourses];
 let assignments = [...fallbackAssignments];
 let currentView = "home"; // 'home', 'connect', 'calendar', 'todo', 'profile', 'settings'
 let upcomingView = 'list'; // 'list' or 'calendar'
+let calendarMonthOffset = 0; // 0 = current month, +/- for navigation
 let dataLoaded = false;
 
 let todos = loadTodos();
@@ -357,9 +327,110 @@ function getHomeContent() {
 
 // -- CALENDAR VIEW GENERATOR --
 function getCalendarContent() {
+    // base date = first of current month, plus offset
+    const base = new Date();
+    base.setDate(1);
+    base.setMonth(base.getMonth() + calendarMonthOffset);
+
+    const year = base.getFullYear();
+    const monthIndex = base.getMonth(); // 0-based
+    const monthName = base.toLocaleDateString("en-US", { month: "long" });
+    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+
+    // left side: upcoming assignments list (same style as home)
+    const assignmentHTML = assignments
+        .map(
+            (a) => `
+        <div class="assignment-item"
+             style="cursor:pointer;"
+             onclick="${a.url ? `window.location.href='${a.url}'` : ''}">
+            <div class="assignment-top-row">
+                <span>${a.title}</span>
+                <span class="assignment-date">${a.dateLabel || ""}</span>
+            </div>
+            <div class="assignment-course">${a.course}</div>
+        </div>
+    `
+        )
+        .join("");
+
+    // right side: calendar for selected month
+    let daysHTML = "";
+    for (let i = 1; i <= daysInMonth; i++) {
+        const events = assignments.filter((a) => {
+            if (!a.rawDate) return false;
+            const d = new Date(a.rawDate);
+            if (Number.isNaN(d)) return false;
+            return (
+                d.getFullYear() === year &&
+                d.getMonth() === monthIndex &&
+                d.getDate() === i
+            );
+        });
+
+        const eventHTML = events
+            .map(
+                (e) => `
+            <div
+                class="cal-event main-cal-event"
+                style="background:${e.bg};"
+                ${e.url ? `data-url="${e.url}"` : ""}
+            >
+                ${e.title}
+            </div>`
+            )
+            .join("");
+
+        daysHTML += `
+            <div class="cal-cell">
+                <strong>${i}</strong>
+                ${eventHTML}
+            </div>
+        `;
+    }
+
+    return `
+    <div class="dashboard-container">
+        <!-- LEFT: Upcoming assignments -->
+        <div class="left-column">
+            <div class="upcoming-header">
+                <div class="upcoming-title">Upcoming</div>
+            </div>
+            <div class="upcoming-scroll assignments-list">
+                ${assignmentHTML}
+            </div>
+        </div>
+
+        <!-- RIGHT: Month calendar with arrows -->
+        <div class="right-column">
+            <div class="calendar-header">
+                <div class="calendar-header-left">
+                    <button class="cal-nav-btn" data-dir="prev">‹</button>
+                    <h2 class="upcoming-title">${monthName} ${year}</h2>
+                    <button class="cal-nav-btn" data-dir="next">›</button>
+                </div>
+                <div style="font-size: 20px;">Reference Mode</div>
+            </div>
+            <div class="upcoming-scroll">
+                <div class="calendar-grid">
+                    <div class="cal-day-header">Mon</div>
+                    <div class="cal-day-header">Tue</div>
+                    <div class="cal-day-header">Wed</div>
+                    <div class="cal-day-header">Thu</div>
+                    <div class="cal-day-header">Fri</div>
+                    <div class="cal-day-header">Sat</div>
+                    <div class="cal-day-header">Sun</div>
+                    ${daysHTML}
+                </div>
+            </div>
+        </div>
+    </div>`;
+}
+
+function getUpcomingCalendarHTML() {
     const now = new Date();
     const year = now.getFullYear();
-    const monthIndex = now.getMonth(); // 0-based
+    const monthIndex = now.getMonth();
     const monthName = now.toLocaleDateString("en-US", { month: "long" });
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
@@ -379,76 +450,16 @@ function getCalendarContent() {
         const eventHTML = events
             .map(
                 (e) => `
-                    <div
-                        class="cal-event"
-                        style="background:${e.bg};"
-                        ${e.url ? `data-url="${e.url}"` : ''}
-                    >
-                        ${e.title}
-                    </div>
-                `
-            )
-            .join("");
-
-
-        daysHTML += `
-            <div class="cal-cell">
-                <strong>${i}</strong>
-                ${eventHTML}
-            </div>
-        `;
-    }
-
-    return `
-    <div class="dashboard-container">
-        <div class="full-width-column">
-            <div class="calendar-header">
-                <h2 class="upcoming-title">${monthName} ${year}</h2>
-                <div style="font-size: 20px;">Reference Mode</div>
-            </div>
-            <div class="calendar-grid">
-                <div class="cal-day-header">Mon</div>
-                <div class="cal-day-header">Tue</div>
-                <div class="cal-day-header">Wed</div>
-                <div class="cal-day-header">Thu</div>
-                <div class="cal-day-header">Fri</div>
-                <div class="cal-day-header">Sat</div>
-                <div class="cal-day-header">Sun</div>
-                ${daysHTML}
-            </div>
-        </div>
-    </div>`;
-}
-
-function getUpcomingCalendarHTML() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const monthIndex = now.getMonth(); // 0-based
-    const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-    const monthName = now.toLocaleDateString("en-US", { month: "long" });
-
-    let daysHTML = '';
-    for (let i = 1; i <= daysInMonth; i++) {
-        const events = assignments.filter(a => {
-            if (!a.rawDate) return false;
-            const d = new Date(a.rawDate);
-            if (Number.isNaN(d)) return false;
-            return (
-                d.getFullYear() === year &&
-                d.getMonth() === monthIndex &&
-                d.getDate() === i
-            );
-        });
-
-        const eventHTML = events.map(e => `
             <div
                 class="cal-event upcoming-cal-event"
                 style="background:${e.bg};"
-                ${e.url ? `data-url="${e.url}"` : ''}
+                ${e.url ? `data-url="${e.url}"` : ""}
             >
                 ${e.title}
             </div>
-        `).join('');
+        `
+            )
+            .join("");
 
         daysHTML += `
             <div class="cal-cell">
@@ -461,7 +472,7 @@ function getUpcomingCalendarHTML() {
     return `
         <div class="upcoming-scroll">
             <div class="calendar-header mini-calendar-header">
-                <h2 class="upcoming-title">${monthName}</h2>
+                <h2 class="upcoming-title">${monthName} ${year}</h2>
             </div>
             <div class="calendar-grid">
                 <div class="cal-day-header">Mon</div>
@@ -476,6 +487,7 @@ function getUpcomingCalendarHTML() {
         </div>
     `;
 }
+
 
 function getTodoContent() {
     const itemsHtml = todos.map((t, idx) => `
@@ -609,6 +621,25 @@ function attachListeners() {
         if (!url) return;
         el.style.cursor = 'pointer';
         el.addEventListener('click', () => {
+            window.location.href = url;
+        });
+    });
+
+        // Month navigation on the full calendar page
+    document.querySelectorAll(".cal-nav-btn").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const dir = btn.dataset.dir;
+            calendarMonthOffset += dir === "next" ? 1 : -1;
+            render();
+        });
+    });
+
+    // Make events on the main calendar clickable
+    document.querySelectorAll(".main-cal-event[data-url]").forEach((el) => {
+        const url = el.getAttribute("data-url");
+        if (!url) return;
+        el.style.cursor = "pointer";
+        el.addEventListener("click", () => {
             window.location.href = url;
         });
     });
