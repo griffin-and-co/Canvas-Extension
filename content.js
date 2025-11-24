@@ -414,12 +414,14 @@ function getCalendarContent() {
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
     // Upcoming list (same structure as home)
-    const assignmentHTML = assignments
-        .map(
-            (a) => `
+   const assignmentHTML = assignments
+    .map((a) => {
+        const color = a.bg || getColorForCourse(a.course);
+        const click = a.url ? `window.location.href='${a.url}'` : "";
+        return `
         <div class="assignment-item" 
-             style="cursor:pointer;"
-             onclick="${a.url ? `window.location.href='${a.url}'` : ''}">
+         style="cursor:pointer; border-left: 6px solid ${color}; padding-left: 16px;"
+         onclick="${click}">
             <div class="assignment-top-row">
                 <span>${a.title}</span>
                 <span class="assignment-date">${a.dateLabel || ""}</span>
@@ -427,8 +429,10 @@ function getCalendarContent() {
             <div class="assignment-course">${a.course}</div>
         </div>
     `
-        )
+    })
         .join("");
+
+        
 
     // Calendar days
     let daysHTML = "";
@@ -468,7 +472,7 @@ function getCalendarContent() {
     return `
     <div class="dashboard-container">
         <!-- LEFT: Upcoming list card (same look as home) -->
-        <div class="right-column">
+        <div class="calendar-left">
             <div class="upcoming-header">
                 <div class="upcoming-title">Upcoming</div>
             </div>
@@ -478,7 +482,7 @@ function getCalendarContent() {
         </div>
 
         <!-- RIGHT: Month calendar -->
-        <div class="full-width-column">
+        <div class="calendar-right">
             <div class="calendar-header">
                 <div class="calendar-header-left">
                     <h2 class="upcoming-title">${monthName} ${year}</h2>
