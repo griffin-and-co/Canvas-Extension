@@ -87,12 +87,19 @@ function loadTodos() {
         const raw = localStorage.getItem("canvasPlus_todos");
         if (!raw) return [];
         const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
+        if (!Array.isArray(parsed)) return [];
+
+        return parsed.map((t) => ({
+            text: t.text || "",
+            done: !!t.done,
+            createdAt: t.createdAt || new Date().toISOString()
+        }));
     } catch (e) {
         console.warn("Failed to load todos", e);
         return [];
     }
 }
+
 
 function saveTodos() {
     try {
@@ -263,20 +270,23 @@ function getHomeContent() {
         .join("");
 
     const assignmentHTML = assignments
-        .map(
-            (a) => `
+    .map((a) => {
+        const color = a.bg || getColorForCourse(a.course);
+        const click = a.url ? `window.location.href='${a.url}'` : "";
+        return `
         <div class="assignment-item" 
-         style="cursor:pointer;"
-         onclick="${a.url ? `window.location.href='${a.url}'` : ''}">
+         style="cursor:pointer; border-left: 6px solid ${color}; padding-left: 16px;"
+         onclick="${click}">
             <div class="assignment-top-row">
                 <span>${a.title}</span>
                 <span class="assignment-date">${a.dateLabel || ""}</span>
             </div>
             <div class="assignment-course">${a.course}</div>
         </div>
-    `
-        )
-        .join("");
+    `;
+    })
+    .join("");
+
 
     return `
     <div class="dashboard-container">
@@ -324,6 +334,51 @@ function getHomeContent() {
 
     </div>`;
 }
+function getCalendarItemsForDay(year, monthIndex, day) {
+    const events = [];
+
+    // assignments
+    assignments.forEach((a) => {
+        if (!a.rawDate) return;
+        const d = new Date(a.rawDate);
+        if (Number.isNaN(d)) return;
+        if (
+            d.getFullYear() === year &&
+            d.getMonth() === monthIndex &&
+            d.getDate() === day
+        ) {
+            events.push({
+                title: a.title,
+                bg: a.bg || getColorForCourse(a.course),
+                url: a.url || null,
+                kind: "assignment"
+            });
+        }
+    });
+
+    // todos: show on the day they were created
+    todos.forEach((t) => {
+        if (!t.createdAt) return;
+        const d = new Date(t.createdAt);
+        if (Number.isNaN(d)) return;
+        if (
+            d.getFullYear() === year &&
+            d.getMonth() === monthIndex &&
+            d.getDate() === day
+        ) {
+            events.push({
+                title: t.text,
+                bg: getColorForCourse("__TODO__"),
+                url: null,
+                kind: "todo"
+            });
+        }
+    });
+
+    return events;
+}
+
+
 
 // -- CALENDAR VIEW GENERATOR --
 function getCalendarContent() {
@@ -340,16 +395,7 @@ function getCalendarContent() {
 
     let daysHTML = "";
     for (let i = 1; i <= daysInMonth; i++) {
-        const events = assignments.filter((a) => {
-            if (!a.rawDate) return false;
-            const d = new Date(a.rawDate);
-            if (Number.isNaN(d)) return false;
-            return (
-                d.getFullYear() === year &&
-                d.getMonth() === monthIndex &&
-                d.getDate() === i
-            );
-        });
+        const events = getCalendarItemsForDay(year, monthIndex, i);
 
         const eventHTML = events
             .map(
@@ -371,6 +417,7 @@ function getCalendarContent() {
             </div>
         `;
     }
+
 
     return `
     <div class="dashboard-container">
@@ -411,16 +458,7 @@ function getUpcomingCalendarHTML() {
 
     let daysHTML = "";
     for (let i = 1; i <= daysInMonth; i++) {
-        const events = assignments.filter((a) => {
-            if (!a.rawDate) return false;
-            const d = new Date(a.rawDate);
-            if (Number.isNaN(d)) return false;
-            return (
-                d.getFullYear() === year &&
-                d.getMonth() === monthIndex &&
-                d.getDate() === i
-            );
-        });
+        const events = getCalendarItemsForDay(year, monthIndex, i);
 
         const eventHTML = events
             .map(
@@ -442,6 +480,7 @@ function getUpcomingCalendarHTML() {
             </div>
         `;
     }
+
 
     return `
         <div class="upcoming-scroll">
@@ -471,15 +510,23 @@ function getUpcomingCalendarHTML() {
 function getTodoContent() {
     const itemsHtml = todos.map((t, idx) => `
         <li class="todo-item" data-idx="${idx}">
-            <label style="display:flex; align-items:center; gap:8px;">
-                <input type="checkbox" class="todo-toggle" ${t.done ? "checked" : ""} />
-                <span class="todo-text ${t.done ? "todo-done" : ""}">
-                    ${t.text}
-                </span>
-            </label>
+            <div class="todo-main">
+                <label style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" class="todo-toggle" ${t.done ? "checked" : ""} />
+                    <span class="todo-text ${t.done ? "todo-done" : ""}">
+                        ${t.text}
+                    </span>
+                </label>
+                <div class="todo-meta">
+                    <span class="todo-date">
+                        ${formatDateLabel(t.createdAt)}
+                    </span>
+                </div>
+            </div>
             <button class="todo-delete" aria-label="Delete task">✕</button>
         </li>
     `).join("");
+
 
     return `
         <div class="dashboard-container">
@@ -648,10 +695,11 @@ function attachListeners() {
         const addTodo = () => {
             const text = todoInput.value.trim();
             if (!text) return;
-            todos.push({ text, done: false });
+            todos.push({ text, done: false, createdAt: new Date().toISOString() });
             saveTodos();
             render();
         };
+
 
         todoAddBtn.addEventListener("click", addTodo);
         todoInput.addEventListener("keydown", (e) => {
